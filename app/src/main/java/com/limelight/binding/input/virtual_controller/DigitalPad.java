@@ -10,6 +10,11 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.view.MotionEvent;
 
+import com.limelight.binding.input.ControllerHandler;
+import com.limelight.nvstream.input.ControllerPacket;
+import com.limelight.nvstream.input.MouseButtonPacket;
+import com.limelight.preferences.PreferenceConfiguration;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,181 +28,191 @@ public class DigitalPad extends VirtualControllerElement {
     List<DigitalPadListener> listeners = new ArrayList<>();
 
     private static final int DPAD_MARGIN = 5;
-
     private final Paint paint = new Paint();
+    private boolean uDown, dDown, lDown, rDown;
 
-    public DigitalPad(VirtualController controller, Context context) {
-        super(controller, context, EID_DPAD);
+    private final Runnable mouseRepeatRunnable = new Runnable() {
+        @Override
+        public void run() {
+            ControllerHandler ch = virtualController.getControllerHandler();
+            if (ch == null) return;
+            
+            if (uDown) handleDirMouseInternal(true, _mappedDirUpMouseAction, ch);
+            if (dDown) handleDirMouseInternal(true, _mappedDirDownMouseAction, ch);
+            if (lDown) handleDirMouseInternal(true, _mappedDirLeftMouseAction, ch);
+            if (rDown) handleDirMouseInternal(true, _mappedDirRightMouseAction, ch);
+            
+            if (uDown || dDown || lDown || rDown) {
+                virtualController.getHandler().postDelayed(this, 33);
+            }
+        }
+    };
+
+    private void handleDirMouseInternal(boolean down, MouseAction action, ControllerHandler ch) {
+        if (!down || action == MouseAction.None) return;
+        float totalSense = _sensitivity * _globalSensitivity;
+
+        if (action == MouseAction.MoveUp) ch.reportVirtualMouseMove((short)0, (short)(-20 * totalSense));
+        else if (action == MouseAction.MoveDown) ch.reportVirtualMouseMove((short)0, (short)(20 * totalSense));
+        else if (action == MouseAction.MoveLeft) ch.reportVirtualMouseMove((short)(-20 * totalSense), (short)0);
+        else if (action == MouseAction.MoveRight) ch.reportVirtualMouseMove((short)(20 * totalSense), (short)0);
+        else if (action == MouseAction.ScrollUp) ch.reportVirtualMouseScroll((byte)(2 * totalSense));
+        else if (action == MouseAction.ScrollDown) ch.reportVirtualMouseScroll((byte)(-2 * totalSense));
     }
 
-    public void addDigitalPadListener(DigitalPadListener listener) {
-        listeners.add(listener);
+    public DigitalPad(VirtualController controller, Context context) {
+        this(controller, context, EID_DPAD);
+    }
+
+    public DigitalPad(VirtualController controller, Context context, int elementId) {
+        super(controller, context, elementId);
+        // Default directional mapping flags
+        _mappedDirUpGamepadFlag = ControllerPacket.UP_FLAG;
+        _mappedDirDownGamepadFlag = ControllerPacket.DOWN_FLAG;
+        _mappedDirLeftGamepadFlag = ControllerPacket.LEFT_FLAG;
+        _mappedDirRightGamepadFlag = ControllerPacket.RIGHT_FLAG;
+    }
+
+    private void updateDirectionalMapping(int currentDirection) {
+        ControllerHandler ch = virtualController.getControllerHandler();
+        if (ch == null) return;
+
+        boolean isU = (currentDirection & DIGITAL_PAD_DIRECTION_UP) != 0;
+        boolean isD = (currentDirection & DIGITAL_PAD_DIRECTION_DOWN) != 0;
+        boolean isL = (currentDirection & DIGITAL_PAD_DIRECTION_LEFT) != 0;
+        boolean isR = (currentDirection & DIGITAL_PAD_DIRECTION_RIGHT) != 0;
+
+        // Always handle keyboard directional binds
+        if (isU != uDown && _mappedKeyUp != 0) ch.reportVirtualKeyboardInput(_mappedKeyUp, isU);
+        if (isD != dDown && _mappedKeyDown != 0) ch.reportVirtualKeyboardInput(_mappedKeyDown, isD);
+        if (isL != lDown && _mappedKeyLeft != 0) ch.reportVirtualKeyboardInput(_mappedKeyLeft, isL);
+        if (isR != rDown && _mappedKeyRight != 0) ch.reportVirtualKeyboardInput(_mappedKeyRight, isR);
+        
+        // Always handle mouse directional binds
+        handleDirMouse(isU, uDown, _mappedDirUpMouseAction, ch);
+        handleDirMouse(isD, dDown, _mappedDirDownMouseAction, ch);
+        handleDirMouse(isL, lDown, _mappedDirLeftMouseAction, ch);
+        handleDirMouse(isR, rDown, _mappedDirRightMouseAction, ch);
+
+        // Gamepad mapping
+        if (!isKeyboardMapping() && !isMouseMapping() || isCombinedMapping()) {
+            VirtualController.ControllerInputContext ctx = virtualController.getControllerInputContext();
+            
+            updateGpFlag(isU, uDown, _mappedDirUpGamepadFlag, ctx);
+            updateGpFlag(isD, dDown, _mappedDirDownGamepadFlag, ctx);
+            updateGpFlag(isL, lDown, _mappedDirLeftGamepadFlag, ctx);
+            updateGpFlag(isR, rDown, _mappedDirRightGamepadFlag, ctx);
+            
+            if (isU != uDown || isD != dDown || isL != lDown || isR != rDown) {
+                virtualController.sendControllerInputContext();
+            }
+        }
+
+        uDown = isU; dDown = isD; lDown = isL; rDown = isR;
+
+        if (uDown || dDown || lDown || rDown) {
+            boolean hasMouseBinds = isMouseBind(_mappedDirUpMouseAction) || isMouseBind(_mappedDirDownMouseAction) || 
+                                   isMouseBind(_mappedDirLeftMouseAction) || isMouseBind(_mappedDirRightMouseAction);
+            
+            if (hasMouseBinds) {
+                virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+                virtualController.getHandler().post(mouseRepeatRunnable);
+            } else {
+                virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+            }
+        } else {
+            virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+        }
+    }
+
+    private boolean isMouseBind(MouseAction action) {
+        return action == MouseAction.MoveUp || action == MouseAction.MoveDown || 
+               action == MouseAction.MoveLeft || action == MouseAction.MoveRight ||
+               action == MouseAction.ScrollUp || action == MouseAction.ScrollDown;
+    }
+
+    private void handleDirMouse(boolean down, boolean wasDown, MouseAction action, ControllerHandler ch) {
+        if (down == wasDown || action == MouseAction.None) return;
+        if (action == MouseAction.LeftClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_LEFT, down);
+        else if (action == MouseAction.RightClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_RIGHT, down);
+        else if (action == MouseAction.MiddleClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_MIDDLE, down);
+    }
+
+    private void updateGpFlag(boolean down, boolean wasDown, int flag, VirtualController.ControllerInputContext ctx) {
+        if (down == wasDown || flag == 0) return;
+        if (down) ctx.inputMap |= flag;
+        else ctx.inputMap &= ~flag;
     }
 
     @Override
     protected void onElementDraw(Canvas canvas) {
-        // set transparent background
         canvas.drawColor(Color.TRANSPARENT);
-
-        paint.setTextSize(getPercent(getCorrectWidth(), 20));
-        paint.setTextAlign(Paint.Align.CENTER);
         paint.setStrokeWidth(getDefaultStrokeWidth());
 
-        if (direction == DIGITAL_PAD_DIRECTION_NO_DIRECTION) {
-            // draw no direction rect
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setColor(getDefaultColor());
-            canvas.drawRect(
-                    getPercent(getWidth(), 36), getPercent(getHeight(), 36),
-                    getPercent(getWidth(), 63), getPercent(getHeight(), 63),
-                    paint
-            );
-        }
+        // Draw individual direction pads
+        drawPadRect(canvas, DIGITAL_PAD_DIRECTION_LEFT, paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 33), getPercent(getWidth(), 33), getPercent(getHeight(), 66));
+        drawPadRect(canvas, DIGITAL_PAD_DIRECTION_UP, getPercent(getWidth(), 33), paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getWidth(), 66), getPercent(getHeight(), 33));
+        drawPadRect(canvas, DIGITAL_PAD_DIRECTION_RIGHT, getPercent(getWidth(), 66), getPercent(getHeight(), 33), getWidth() - (paint.getStrokeWidth()+DPAD_MARGIN), getPercent(getHeight(), 66));
+        drawPadRect(canvas, DIGITAL_PAD_DIRECTION_DOWN, getPercent(getWidth(), 33), getPercent(getHeight(), 66), getPercent(getWidth(), 66), getHeight() - (paint.getStrokeWidth()+DPAD_MARGIN));
 
-        // draw left rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_LEFT) > 0 ? pressedColor : getDefaultColor());
+        // Draw separating lines
         paint.setStyle(Paint.Style.STROKE);
-        canvas.drawRect(
-                paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 33),
-                getPercent(getWidth(), 33), getPercent(getHeight(), 66),
-                paint
-        );
-
-
-        // draw up rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_UP) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawRect(
-                getPercent(getWidth(), 33), paint.getStrokeWidth()+DPAD_MARGIN,
-                getPercent(getWidth(), 66), getPercent(getHeight(), 33),
-                paint
-        );
-
-        // draw right rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_RIGHT) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawRect(
-                getPercent(getWidth(), 66), getPercent(getHeight(), 33),
-                getWidth() - (paint.getStrokeWidth()+DPAD_MARGIN), getPercent(getHeight(), 66),
-                paint
-        );
-
-        // draw down rect
-        paint.setColor(
-                (direction & DIGITAL_PAD_DIRECTION_DOWN) > 0 ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawRect(
-                getPercent(getWidth(), 33), getPercent(getHeight(), 66),
-                getPercent(getWidth(), 66), getHeight() - (paint.getStrokeWidth()+DPAD_MARGIN),
-                paint
-        );
-
-        // draw left up line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_LEFT) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_UP) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawLine(
-                paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 33),
-                getPercent(getWidth(), 33), paint.getStrokeWidth()+DPAD_MARGIN,
-                paint
-        );
-
-        // draw up right line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_UP) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_RIGHT) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawLine(
-                getPercent(getWidth(), 66), paint.getStrokeWidth()+DPAD_MARGIN,
-                getWidth() - (paint.getStrokeWidth()+DPAD_MARGIN), getPercent(getHeight(), 33),
-                paint
-        );
-
-        // draw right down line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_RIGHT) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_DOWN) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawLine(
-                getWidth()-paint.getStrokeWidth(), getPercent(getHeight(), 66),
-                getPercent(getWidth(), 66), getHeight()-(paint.getStrokeWidth()+DPAD_MARGIN),
-                paint
-        );
-
-        // draw down left line
-        paint.setColor((
-                        (direction & DIGITAL_PAD_DIRECTION_DOWN) > 0 &&
-                                (direction & DIGITAL_PAD_DIRECTION_LEFT) > 0
-                ) ? pressedColor : getDefaultColor()
-        );
-        paint.setStyle(Paint.Style.STROKE);
-        canvas.drawLine(
-                getPercent(getWidth(), 33), getHeight()-(paint.getStrokeWidth()+DPAD_MARGIN),
-                paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 66),
-                paint
-        );
+        paint.setColor(getDefaultColor());
+        canvas.drawLine(paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 33), getPercent(getWidth(), 33), paint.getStrokeWidth()+DPAD_MARGIN, paint);
+        canvas.drawLine(getPercent(getWidth(), 66), paint.getStrokeWidth()+DPAD_MARGIN, getWidth() - (paint.getStrokeWidth()+DPAD_MARGIN), getPercent(getHeight(), 33), paint);
+        canvas.drawLine(getWidth()-paint.getStrokeWidth(), getPercent(getHeight(), 66), getPercent(getWidth(), 66), getHeight()-(paint.getStrokeWidth()+DPAD_MARGIN), paint);
+        canvas.drawLine(getPercent(getWidth(), 33), getHeight()-(paint.getStrokeWidth()+DPAD_MARGIN), paint.getStrokeWidth()+DPAD_MARGIN, getPercent(getHeight(), 66), paint);
     }
 
-    private void newDirectionCallback(int direction) {
-        _DBG("direction: " + direction);
-
-        // notify listeners
-        for (DigitalPadListener listener : listeners) {
-            listener.onDirectionChange(direction);
-        }
+    private void drawPadRect(Canvas canvas, int dir, float l, float t, float r, float b) {
+        int color = (direction & dir) > 0 ? getPressedColor() : getDefaultColor();
+        paint.setColor(color & 0x40FFFFFF);
+        paint.setStyle(Paint.Style.FILL);
+        canvas.drawRect(l, t, r, b, paint);
+        paint.setColor(color);
+        paint.setStyle(Paint.Style.STROKE);
+        canvas.drawRect(l, t, r, b, paint);
     }
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        // get masked (not specific to a pointer) action
         switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_DOWN: {
+                updateGlobalSensitivity();
+            }
             case MotionEvent.ACTION_MOVE: {
                 direction = 0;
-
-                if (event.getX() < getPercent(getWidth(), 33)) {
+                // LEFT
+                if (event.getX() < getPercent(getWidth(), 33))
                     direction |= DIGITAL_PAD_DIRECTION_LEFT;
-                }
-                if (event.getX() > getPercent(getWidth(), 66)) {
-                    direction |= DIGITAL_PAD_DIRECTION_RIGHT;
-                }
-                if (event.getY() > getPercent(getHeight(), 66)) {
-                    direction |= DIGITAL_PAD_DIRECTION_DOWN;
-                }
-                if (event.getY() < getPercent(getHeight(), 33)) {
-                    direction |= DIGITAL_PAD_DIRECTION_UP;
-                }
-                newDirectionCallback(direction);
-                invalidate();
 
+// RIGHT
+                if (event.getX() > getPercent(getWidth(), 66))
+                    direction |= DIGITAL_PAD_DIRECTION_RIGHT;
+
+// UP
+                if (event.getY() < getPercent(getHeight(), 33))
+                    direction |= DIGITAL_PAD_DIRECTION_UP;
+
+// DOWN
+                if (event.getY() > getPercent(getHeight(), 66))
+                    direction |= DIGITAL_PAD_DIRECTION_DOWN;
+
+                updateDirectionalMapping(direction);
+                invalidate();
                 return true;
             }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 direction = 0;
-                newDirectionCallback(direction);
+                updateDirectionalMapping(direction);
                 invalidate();
-
                 return true;
             }
-            default: {
-            }
         }
-
         return true;
     }
 
-    public interface DigitalPadListener {
-        void onDirectionChange(int direction);
-    }
+    public interface DigitalPadListener { void onDirectionChange(int direction); }
+    public void addDigitalPadListener(DigitalPadListener listener) { listeners.add(listener); }
 }

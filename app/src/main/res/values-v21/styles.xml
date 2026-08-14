@@ -7,8 +7,22 @@
     -->
     <style name="AppBaseTheme" parent="android:Theme.Material">
         <!-- API 21 theme customizations can go here. -->
-        <item name="android:statusBarColor">#212121</item>
-        <item name="android:navigationBarColor">#212121</item>
+        <item name="android:statusBarColor">@color/black_purple</item>
+        <item name="android:navigationBarColor">@color/black_purple</item>
+        <item name="android:colorPrimary">@color/deep_purple</item>
+        <item name="android:colorPrimaryDark">@color/black_purple</item>
+        <item name="android:colorAccent">@color/purple_accent</item>
+        <item name="android:alertDialogTheme">@style/CustomAlertDialog</item>
+    </style>
+
+    <style name="CustomAlertDialog" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:background">@drawable/dialog_rounded_bg</item>
+        <item name="android:buttonBarButtonStyle">@style/PurpleDialogButton</item>
+    </style>
+
+    <style name="PurpleDialogButton" parent="android:Widget.Material.Button.Borderless.Colored">
+        <item name="android:textColor">@color/purple_accent</item>
     </style>
 
 </resources>

@@ -8,36 +8,40 @@
 
     <RelativeLayout
         android:id="@+id/headerLayout"
-        android:layout_width="match_parent"
-        android:layout_height="65dp"
+        android:layout_width="70dp"
+        android:layout_height="match_parent"
         android:background="@color/black_purple"
-        android:elevation="4dp">
+        android:elevation="4dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true">
 
         <TextView
             android:id="@+id/manuallyAddPcText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="20dp"
-            android:layout_marginLeft="20dp"
+            android:layout_centerInParent="true"
+            android:rotation="-90"
             android:text="@string/title_add_pc"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:singleLine="true" />
     </RelativeLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/headerLayout"
+        android:layout_toEndOf="@id/headerLayout"
+        android:layout_toRightOf="@id/headerLayout"
+        android:layout_centerVertical="true"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="40dp">
 
         <EditText
             android:id="@+id/hostTextView"
-            android:layout_width="match_parent"
+            android:layout_width="400dp"
             android:layout_height="50dp"
-            android:layout_marginTop="0dp"
+            android:layout_gravity="center_horizontal"
             android:ems="10"
             android:singleLine="true"
             android:preferKeepClear="true"
@@ -52,10 +56,10 @@
 
         <Button
             android:id="@+id/addPcButton"
-            android:layout_width="300dp"
+            android:layout_width="200dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="25dp"
+            android:layout_marginTop="20dp"
             android:background="@drawable/addpcbuttonrounded"
             android:backgroundTint="@color/purple_accent"
             android:text="@android:string/ok"

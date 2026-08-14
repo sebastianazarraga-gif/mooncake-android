@@ -13,6 +13,17 @@
             backward-compatibility can go here.
 
         -->
+        <item name="android:alertDialogTheme">@style/CustomAlertDialog</item>
+    </style>
+
+    <style name="CustomAlertDialog" parent="@android:style/Theme.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:background">@drawable/dialog_rounded_bg</item>
+        <item name="android:buttonBarButtonStyle">@style/PurpleDialogButton</item>
+    </style>
+
+    <style name="PurpleDialogButton" parent="@android:style/Widget.Button">
+        <item name="android:textColor">@color/purple_accent</item>
     </style>
 
     <!-- Application theme. -->
@@ -20,6 +31,7 @@
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@drawable/main_background_gradient</item>
     </style>
 
     <style name="StreamBaseTheme" parent="AppBaseTheme">

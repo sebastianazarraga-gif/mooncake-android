@@ -1,8 +1,391 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/configure_virtual_controller_frameLayout"
-    >
+    android:background="@drawable/main_background_gradient">
 
-</FrameLayout>
+    <!-- Main Workspace -->
+    <FrameLayout
+        android:id="@+id/configure_virtual_controller_frameLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Top Left Controls (Minimized) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_margin="12dp"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/addButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/addpcbuttonrounded"
+            android:backgroundTint="@color/purple_accent"
+            android:src="@drawable/ic_add"
+            android:contentDescription="Add"
+            android:scaleType="centerInside"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/gridButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/addpcbuttonrounded"
+            android:backgroundTint="@color/purple_accent"
+            android:src="@android:drawable/ic_menu_sort_by_size"
+            android:contentDescription="Grid"
+            android:scaleType="centerInside"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/menuButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/addpcbuttonrounded"
+            android:backgroundTint="@color/purple_accent"
+            android:src="@android:drawable/ic_menu_manage"
+            android:contentDescription="Menu"
+            android:scaleType="centerInside"
+            android:padding="8dp" />
+
+    </LinearLayout>
+
+    <!-- Side Panel -->
+    <LinearLayout
+        android:id="@+id/sidePanel"
+        android:layout_width="280dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true"
+        android:background="#CC0D001A"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone"
+        android:elevation="12dp">
+
+        <TextView
+            android:id="@+id/panelTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Properties"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/propertiesContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Mapping Mode"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp"
+                    android:layout_marginTop="4dp" />
+                <Spinner
+                    android:id="@+id/mappingModeSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginBottom="16dp"
+                    android:backgroundTint="#FFFFFF" />
+
+                <TextView
+                    android:id="@+id/bindingLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Binding"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp" />
+                <Spinner
+                    android:id="@+id/bindingSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginBottom="16dp"
+                    android:backgroundTint="#FFFFFF" />
+
+                <Button
+                    android:id="@+id/setKeyboardButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="Set Keyboard Key"
+                    android:textSize="12sp"
+                    android:backgroundTint="@color/deep_purple"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/setMouseButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="Set Mouse Action"
+                    android:textSize="12sp"
+                    android:backgroundTint="@color/deep_purple"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/setCustomTextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="Set Button Text"
+                    android:textSize="12sp"
+                    android:backgroundTint="@color/deep_purple"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <CheckBox
+                    android:id="@+id/toggleModeCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Toggle Mode"
+                    android:textColor="#AAAAAA"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone" />
+
+                <!-- Directional Bindings in D-Pad Layout -->
+                <LinearLayout
+                    android:id="@+id/directionalBindings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="16dp"
+                    android:gravity="center_horizontal"
+                    android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Directional Bindings" android:textColor="#BB86FC" android:textStyle="bold" android:textSize="11sp" android:layout_marginBottom="8dp"/>
+
+                    <Button android:id="@+id/bindUp" android:layout_width="80dp" android:layout_height="40dp" android:text="UP" android:textSize="10sp" android:backgroundTint="@color/deep_purple"/>
+
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
+                        <Button android:id="@+id/bindLeft" android:layout_width="80dp" android:layout_height="40dp" android:text="LEFT" android:textSize="10sp" android:backgroundTint="@color/deep_purple"/>
+                        <View android:layout_width="40dp" android:layout_height="40dp" />
+                        <Button android:id="@+id/bindRight" android:layout_width="80dp" android:layout_height="40dp" android:text="RIGHT" android:textSize="10sp" android:backgroundTint="@color/deep_purple"/>
+                    </LinearLayout>
+
+                    <Button android:id="@+id/bindDown" android:layout_width="80dp" android:layout_height="40dp" android:text="DOWN" android:textSize="10sp" android:backgroundTint="@color/deep_purple"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Shape"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp" />
+                <Spinner
+                    android:id="@+id/shapeSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginBottom="16dp"
+                    android:backgroundTint="#FFFFFF" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/widthLabel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Width"
+                        android:textColor="#AAAAAA"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/widthValueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="150"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+                <SeekBar
+                    android:id="@+id/widthSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="50"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/heightLabel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Length"
+                        android:textColor="#AAAAAA"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/heightValueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="150"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+                <SeekBar
+                    android:id="@+id/heightSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="50"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/rotationLabel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Rotation"
+                        android:textColor="#AAAAAA"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/rotationValueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+                <SeekBar
+                    android:id="@+id/rotationSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="360"
+                    android:progress="0"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Opacity"
+                        android:textColor="#AAAAAA"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/opacityValueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+                <SeekBar
+                    android:id="@+id/opacitySlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="100"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Color"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp" />
+                <Spinner
+                    android:id="@+id/colorSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginBottom="12dp"
+                    android:backgroundTint="#FFFFFF" />
+
+                <LinearLayout
+                    android:id="@+id/sensitivityContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <TextView
+                            android:id="@+id/sensitivityLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Sensitivity"
+                            android:textColor="#AAAAAA"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/sensitivityValueText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1.0"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                    <SeekBar
+                        android:id="@+id/sensitivitySlider"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="100"
+                        android:progress="50"
+                        android:layout_marginBottom="12dp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/saveElementButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:text="Save This Control"
+                    android:backgroundTint="@color/purple_accent"
+                    android:textColor="#000000"
+                    android:layout_marginTop="8dp" />
+
+                <Button
+                    android:id="@+id/deleteButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:text="Remove Control"
+                    android:backgroundTint="#AA4444"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Global Actions at bottom of panel -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            <Button
+                android:id="@+id/resetButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Reset"
+                android:textSize="14sp"
+                android:backgroundTint="@color/deep_purple"
+                android:textColor="#FFFFFF" />
+            <Button
+                android:id="@+id/saveButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Save"
+                android:textSize="14sp"
+                android:backgroundTint="@color/purple_accent"
+                android:textColor="#000000" />
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

@@ -1,28 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
+    android:background="@drawable/main_background_gradient"
     tools:context=".PcView" >
+
+    <RelativeLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="70dp"
+        android:layout_height="match_parent"
+        android:background="@color/black_purple"
+        android:elevation="4dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_centerVertical="true">
+
+            <ImageButton
+                android:id="@+id/controllerButton"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/addpcbuttonrounded"
+                android:backgroundTint="@color/purple_accent"
+                android:src="@drawable/ic_gamepad"
+                android:scaleType="centerInside"
+                android:padding="12dp"
+                android:contentDescription="Controller Mapping" />
+
+            <ImageButton
+                android:id="@+id/manuallyAddPc"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_add"
+                android:scaleType="centerInside"
+                android:padding="12dp"
+                android:contentDescription="@string/add_pc" />
+
+            <ImageButton
+                android:id="@+id/helpButton"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_help"
+                android:scaleType="centerInside"
+                android:padding="12dp"
+                android:contentDescription="@string/help" />
+
+            <ImageButton
+                android:id="@+id/settingsButton"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_settings"
+                android:scaleType="centerInside"
+                android:padding="12dp"
+                android:contentDescription="@string/category_basic_settings" />
+        </LinearLayout>
+    </RelativeLayout>
 
     <RelativeLayout
         android:id="@+id/pcFragmentContainer"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentTop="true"
-        android:layout_toRightOf="@+id/settingsButton"
-        android:layout_toEndOf="@+id/settingsButton">
+        android:layout_height="match_parent"
+        android:layout_toEndOf="@id/headerLayout"
+        android:layout_toRightOf="@id/headerLayout"
+        android:gravity="center">
 
         <RelativeLayout
             android:id="@+id/no_pc_found_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_centerHorizontal="true">
+            android:layout_centerInParent="true">
             <ProgressBar
                 android:id="@+id/pcs_loading"
                 android:layout_width="75dp"
@@ -38,47 +93,10 @@
                 android:layout_centerVertical="true"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:gravity="center"
-                android:text="@string/searching_pc"/>
+                android:text="@string/searching_pc"
+                android:textColor="#FFFFFF"/>
         </RelativeLayout>
 
     </RelativeLayout>
-
-    <ImageButton
-        android:id="@+id/settingsButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
-        android:cropToPadding="false"
-        android:scaleType="fitXY"
-        android:nextFocusForward="@id/helpButton"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:src="@drawable/ic_settings"
-        style="?android:attr/borderlessButtonStyle"/>
-
-    <ImageButton
-        android:id="@+id/helpButton"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
-        android:cropToPadding="false"
-        android:scaleType="fitXY"
-        android:nextFocusForward="@id/manuallyAddPc"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@id/settingsButton"
-        android:src="@drawable/ic_help"
-        style="?android:attr/borderlessButtonStyle"/>
-
-    <ImageButton
-        android:id="@+id/manuallyAddPc"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
-        android:cropToPadding="false"
-        android:scaleType="fitXY"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@id/helpButton"
-        android:src="@drawable/ic_add"
-        style="?android:attr/borderlessButtonStyle"/>
 
 </RelativeLayout>

@@ -12,8 +12,14 @@ import android.util.DisplayMetrics;
 import com.limelight.nvstream.input.ControllerPacket;
 import com.limelight.preferences.PreferenceConfiguration;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class VirtualControllerConfigurationLoader {
     public static final String OSC_PREFERENCE = "OSC";
@@ -32,47 +38,10 @@ public class VirtualControllerConfigurationLoader {
     private static DigitalPad createDigitalPad(
             final VirtualController controller,
             final Context context) {
-
-        DigitalPad digitalPad = new DigitalPad(controller, context);
-        digitalPad.addDigitalPadListener(new DigitalPad.DigitalPadListener() {
-            @Override
-            public void onDirectionChange(int direction) {
-                VirtualController.ControllerInputContext inputContext =
-                        controller.getControllerInputContext();
-
-                if ((direction & DigitalPad.DIGITAL_PAD_DIRECTION_LEFT) != 0) {
-                    inputContext.inputMap |= ControllerPacket.LEFT_FLAG;
-                }
-                else {
-                    inputContext.inputMap &= ~ControllerPacket.LEFT_FLAG;
-                }
-                if ((direction & DigitalPad.DIGITAL_PAD_DIRECTION_RIGHT) != 0) {
-                    inputContext.inputMap |= ControllerPacket.RIGHT_FLAG;
-                }
-                else {
-                    inputContext.inputMap &= ~ControllerPacket.RIGHT_FLAG;
-                }
-                if ((direction & DigitalPad.DIGITAL_PAD_DIRECTION_UP) != 0) {
-                    inputContext.inputMap |= ControllerPacket.UP_FLAG;
-                }
-                else {
-                    inputContext.inputMap &= ~ControllerPacket.UP_FLAG;
-                }
-                if ((direction & DigitalPad.DIGITAL_PAD_DIRECTION_DOWN) != 0) {
-                    inputContext.inputMap |= ControllerPacket.DOWN_FLAG;
-                }
-                else {
-                    inputContext.inputMap &= ~ControllerPacket.DOWN_FLAG;
-                }
-
-                controller.sendControllerInputContext();
-            }
-        });
-
-        return digitalPad;
+        return new DigitalPad(controller, context);
     }
 
-    private static DigitalButton createDigitalButton(
+    public static DigitalButton createDigitalButton(
             final int elementId,
             final int keyShort,
             final int keyLong,
@@ -84,36 +53,7 @@ public class VirtualControllerConfigurationLoader {
         DigitalButton button = new DigitalButton(controller, elementId, layer, context);
         button.setText(text);
         button.setIcon(icon);
-
-        button.addDigitalButtonListener(new DigitalButton.DigitalButtonListener() {
-            @Override
-            public void onClick() {
-                VirtualController.ControllerInputContext inputContext =
-                        controller.getControllerInputContext();
-                inputContext.inputMap |= keyShort;
-
-                controller.sendControllerInputContext();
-            }
-
-            @Override
-            public void onLongClick() {
-                VirtualController.ControllerInputContext inputContext =
-                        controller.getControllerInputContext();
-                inputContext.inputMap |= keyLong;
-
-                controller.sendControllerInputContext();
-            }
-
-            @Override
-            public void onRelease() {
-                VirtualController.ControllerInputContext inputContext =
-                        controller.getControllerInputContext();
-                inputContext.inputMap &= ~keyShort;
-                inputContext.inputMap &= ~keyLong;
-
-                controller.sendControllerInputContext();
-            }
-        });
+        button.setGamepadFlag(keyShort);
 
         return button;
     }
@@ -194,10 +134,15 @@ public class VirtualControllerConfigurationLoader {
         DisplayMetrics screen = context.getResources().getDisplayMetrics();
         PreferenceConfiguration config = PreferenceConfiguration.readPreferences(context);
 
-        // Displace controls on the right by this amount of pixels to account for different aspect ratios
-        int rightDisplacement = screen.widthPixels - screen.heightPixels * 16 / 9;
+        int width = controller.getFrameLayout().getWidth();
+        int height = controller.getFrameLayout().getHeight();
 
-        int height = screen.heightPixels;
+        if (width <= 0 || height <= 0) {
+            width = screen.widthPixels;
+            height = screen.heightPixels;
+        }
+
+        int rightDisplacement = width - height * 16 / 9;
 
         // NOTE: Some of these getPercent() expressions seem like they can be combined
         // into a single call. Due to floating point rounding, this isn't actually possible.
@@ -353,36 +298,150 @@ public class VirtualControllerConfigurationLoader {
     public static void saveProfile(final VirtualController controller,
                                    final Context context) {
         SharedPreferences.Editor prefEditor = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE).edit();
+        
+        // Track which default elements are present
+        HashSet<Integer> presentIds = new HashSet<>();
+        JSONArray customIds = new JSONArray();
 
         for (VirtualControllerElement element : controller.getElements()) {
+
+            presentIds.add(element.elementId);
             String prefKey = ""+element.elementId;
             try {
-                prefEditor.putString(prefKey, element.getConfiguration().toString());
+                JSONObject config = element.getConfiguration();
+                config.put("HIDDEN", false);
+                prefEditor.putString(prefKey, config.toString());
+                if (element.elementId >= 100) {
+                    customIds.put(element.elementId);
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
 
+        // Mark missing default elements (1-16) as HIDDEN so they don't reappear
+        for (int i = 1; i <= 16; i++) {
+            if (!presentIds.contains(i)) {
+                try {
+                    JSONObject config = new JSONObject();
+                    config.put("HIDDEN", true);
+                    prefEditor.putString(""+i, config.toString());
+                } catch (JSONException e) {}
+            }
+        }
+
+        prefEditor.putString("CUSTOM_IDS", customIds.toString());
         prefEditor.apply();
+    }
+
+    public static void saveElement(final VirtualControllerElement element, final Context context) {
+        SharedPreferences.Editor prefEditor = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE).edit();
+        try {
+            JSONObject config = element.getConfiguration();
+            config.put("HIDDEN", false);
+            prefEditor.putString(""+element.elementId, config.toString());
+            
+            // If it's a custom element, ensure it's in the CUSTOM_IDS list
+            if (element.elementId >= 100) {
+                SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE);
+                String customIdsJson = pref.getString("CUSTOM_IDS", "[]");
+                JSONArray customIds = new JSONArray(customIdsJson);
+                boolean exists = false;
+                for (int i = 0; i < customIds.length(); i++) {
+                    if (customIds.getInt(i) == element.elementId) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    customIds.put(element.elementId);
+                    prefEditor.putString("CUSTOM_IDS", customIds.toString());
+                }
+            }
+            prefEditor.apply();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void loadFromPreferences(final VirtualController controller, final Context context) {
         SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE);
 
+        // Track IDs we've already loaded
+        Set<Integer> loadedIds = new HashSet<>();
+        List<VirtualControllerElement> toRemove = new ArrayList<>();
+
         for (VirtualControllerElement element : controller.getElements()) {
             String prefKey = ""+element.elementId;
+            loadedIds.add(element.elementId);
 
             String jsonConfig = pref.getString(prefKey, null);
             if (jsonConfig != null) {
                 try {
-                    element.loadConfiguration(new JSONObject(jsonConfig));
+                    JSONObject config = new JSONObject(jsonConfig);
+                    if (config.optBoolean("HIDDEN", false)) {
+                        toRemove.add(element);
+                    } else {
+                        element.loadConfiguration(config);
+                    }
                 } catch (JSONException e) {
                     e.printStackTrace();
-
-                    // Remove the corrupt element from the preferences
                     pref.edit().remove(prefKey).apply();
                 }
             }
+        }
+
+        for (VirtualControllerElement element : toRemove) {
+            controller.removeElement(element);
+        }
+
+        // Load custom elements
+        String customIdsJson = pref.getString("CUSTOM_IDS", "[]");
+        try {
+            JSONArray customIds = new JSONArray(customIdsJson);
+            for (int i = 0; i < customIds.length(); i++) {
+                int id = customIds.getInt(i);
+                if (loadedIds.contains(id)) continue;
+
+                String jsonConfig = pref.getString(""+id, null);
+                if (jsonConfig != null) {
+                    JSONObject config = new JSONObject(jsonConfig);
+                    if (config.optBoolean("HIDDEN", false)) continue;
+
+                    VirtualControllerElement element;
+                    String type = config.optString("TYPE", "");
+                    if (type.equals("DigitalPad")) {
+                        element = new DigitalPad(controller, context, id);
+                    } else if (type.equals("LeftAnalogStick")) {
+                        element = new LeftAnalogStick(controller, context, id);
+                    } else if (type.equals("RightAnalogStick")) {
+                        element = new RightAnalogStick(controller, context);
+                        setElementId(element, id);
+                    } else if (type.equals("LeftTrigger")) {
+                        element = new LeftTrigger(controller, 1, context);
+                        setElementId(element, id);
+                    } else if (type.equals("RightTrigger")) {
+                        element = new RightTrigger(controller, 1, context);
+                        setElementId(element, id);
+                    } else {
+                        element = createDigitalButton(id, 0, 0, 1, "Btn", -1, controller, context);
+                    }
+                    controller.addElement(element, 0, 0, 100, 100);
+                    element.loadConfiguration(config);
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void setElementId(VirtualControllerElement element, int id) {
+        try {
+            java.lang.reflect.Field f = VirtualControllerElement.class.getDeclaredField("elementId");
+            f.setAccessible(true);
+            f.set(element, id);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

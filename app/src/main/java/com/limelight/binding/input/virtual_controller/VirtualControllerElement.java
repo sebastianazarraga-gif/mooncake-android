@@ -14,8 +14,14 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import com.limelight.preferences.PreferenceConfiguration;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public abstract class VirtualControllerElement extends View {
     protected static boolean _PRINT_DEBUG_INFORMATION = false;
@@ -38,18 +44,65 @@ public abstract class VirtualControllerElement extends View {
     public static final int EID_GDB = 16;
 
     protected VirtualController virtualController;
-    protected final int elementId;
+    protected int elementId;
 
     private final Paint paint = new Paint();
 
-    private int normalColor = 0xF0888888;
+    protected int normalColor = 0xF0888888;
     protected int pressedColor = 0xF00000FF;
     private int configMoveColor = 0xF0FF0000;
     private int configResizeColor = 0xF0FF00FF;
     private int configSelectedColor = 0xF000FF00;
 
+    protected int _customColor = 0;
+
+    protected int _width = -1;
+    protected int _height = -1;
+
     protected int startSize_x;
     protected int startSize_y;
+
+    protected boolean _isKeyboardMapping = false;
+    protected short _mappedKeyCode = 0;
+
+    protected boolean _isMouseMapping = false;
+    protected boolean _isCombinedMapping = false;
+    public enum MouseAction {
+        None, LeftClick, RightClick, MiddleClick, MoveUp, MoveDown, MoveLeft, MoveRight, ScrollUp, ScrollDown
+    }
+    protected MouseAction _mouseAction = MouseAction.None;
+
+    protected int _gamepadFlag = 0;
+    protected float _sensitivity = 1.0f;
+    protected float _globalSensitivity = 1.0f;
+
+    protected short _mappedKeyUp = 0;
+    protected short _mappedKeyDown = 0;
+    protected short _mappedKeyLeft = 0;
+    protected short _mappedKeyRight = 0;
+
+    protected int _mappedDirUpGamepadFlag = 0;
+    protected int _mappedDirDownGamepadFlag = 0;
+    protected int _mappedDirLeftGamepadFlag = 0;
+    protected int _mappedDirRightGamepadFlag = 0;
+
+    protected MouseAction _mappedDirUpMouseAction = MouseAction.None;
+    protected MouseAction _mappedDirDownMouseAction = MouseAction.None;
+    protected MouseAction _mappedDirLeftMouseAction = MouseAction.None;
+    protected MouseAction _mappedDirRightMouseAction = MouseAction.None;
+
+    public enum Shape {
+        Circle,
+        Square,
+        SquareRounded
+    }
+    protected Shape shape = Shape.Circle;
+    protected int _opacity = 100;
+    protected float _rotation = 0;
+    
+    protected boolean _isToggleMode = false;
+    protected boolean _isToggled = false;
+    protected String _customText = null;
 
     float position_pressed_x = 0;
     float position_pressed_y = 0;
@@ -73,10 +126,23 @@ public abstract class VirtualControllerElement extends View {
         int newPos_x = (int) getX() + x - pressed_x;
         int newPos_y = (int) getY() + y - pressed_y;
 
+        if (virtualController.isGridSnapping()) {
+            int gridSize = 20;
+            newPos_x = (newPos_x / gridSize) * gridSize;
+            newPos_y = (newPos_y / gridSize) * gridSize;
+        }
+
+        if (newPos_x < 0) newPos_x = 0;
+        if (newPos_y < 0) newPos_y = 0;
+
+        // if (checkCollision(newPos_x, newPos_y, getWidth(), getHeight())) {
+        //     return;
+        // }
+
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
 
-        layoutParams.leftMargin = newPos_x > 0 ? newPos_x : 0;
-        layoutParams.topMargin = newPos_y > 0 ? newPos_y : 0;
+        layoutParams.leftMargin = newPos_x;
+        layoutParams.topMargin = newPos_y;
         layoutParams.rightMargin = 0;
         layoutParams.bottomMargin = 0;
 
@@ -84,65 +150,80 @@ public abstract class VirtualControllerElement extends View {
     }
 
     protected void resizeElement(int pressed_x, int pressed_y, int width, int height) {
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
-
         int newHeight = height + (startSize_y - pressed_y);
         int newWidth = width + (startSize_x - pressed_x);
+        
+        if (newHeight < 20) newHeight = 20;
+        if (newWidth < 20) newWidth = 20;
 
-        layoutParams.height = newHeight > 20 ? newHeight : 20;
-        layoutParams.width = newWidth > 20 ? newWidth : 20;
+        // if (checkCollision((int)getX(), (int)getY(), newWidth, newHeight)) {
+        //     return;
+        // }
+
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
+        layoutParams.height = newHeight;
+        layoutParams.width = newWidth;
 
         requestLayout();
     }
 
+    protected boolean checkCollision(int x, int y, int w, int h) {
+        for (VirtualControllerElement element : virtualController.getElements()) {
+            if (element == this) continue;
+            
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) element.getLayoutParams();
+            int otherX = lp.leftMargin;
+            int otherY = lp.topMargin;
+            int otherW = lp.width;
+            int otherH = lp.height;
+
+            if (x < otherX + otherW && x + w > otherX &&
+                y < otherY + otherH && y + h > otherY) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
+        canvas.save();
+        canvas.rotate(_rotation, getWidth() / 2f, getHeight() / 2f);
         onElementDraw(canvas);
+        canvas.restore();
 
-        if (currentMode != Mode.Normal) {
-            paint.setColor(configSelectedColor);
-            paint.setStrokeWidth(getDefaultStrokeWidth());
+        VirtualController.ControllerMode vmode = virtualController.getControllerMode();
+        boolean isSelected = virtualController.getSelectedElement() == this;
+
+        if (vmode != VirtualController.ControllerMode.Active) {
             paint.setStyle(Paint.Style.STROKE);
+            
+            if (isSelected) {
+                paint.setColor(0xFFBB86FC); // Purple for selection
+                paint.setStrokeWidth(getDefaultStrokeWidth() * 2);
+            } else {
+                // Subtle border for all elements in config mode
+                paint.setStrokeWidth(getDefaultStrokeWidth());
+                if (vmode == VirtualController.ControllerMode.MoveButtons) {
+                    paint.setColor(0x80FF0000); // Semi-transparent Red for move
+                } else {
+                    paint.setColor(0x80FF00FF); // Semi-transparent Pink for resize
+                }
+            }
 
-            canvas.drawRect(paint.getStrokeWidth(), paint.getStrokeWidth(),
-                    getWidth()-paint.getStrokeWidth(), getHeight()-paint.getStrokeWidth(),
-                    paint);
+            float sw = paint.getStrokeWidth();
+            if (shape == Shape.Square) {
+                canvas.drawRect(sw, sw, getWidth() - sw, getHeight() - sw, paint);
+            } else if (shape == Shape.SquareRounded) {
+                float r = getPercent(getCorrectWidth(), 15);
+                canvas.drawRoundRect(sw, sw, getWidth() - sw, getHeight() - sw, r, r, paint);
+            } else {
+                canvas.drawOval(sw, sw, getWidth() - sw, getHeight() - sw, paint);
+            }
         }
 
         super.onDraw(canvas);
     }
-
-    /*
-    protected void actionShowNormalColorChooser() {
-        AmbilWarnaDialog colorDialog = new AmbilWarnaDialog(getContext(), normalColor, true, new AmbilWarnaDialog.OnAmbilWarnaListener() {
-            @Override
-            public void onCancel(AmbilWarnaDialog dialog)
-            {}
-
-            @Override
-            public void onOk(AmbilWarnaDialog dialog, int color) {
-                normalColor = color;
-                invalidate();
-            }
-        });
-        colorDialog.show();
-    }
-
-    protected void actionShowPressedColorChooser() {
-        AmbilWarnaDialog colorDialog = new AmbilWarnaDialog(getContext(), normalColor, true, new AmbilWarnaDialog.OnAmbilWarnaListener() {
-            @Override
-            public void onCancel(AmbilWarnaDialog dialog) {
-            }
-
-            @Override
-            public void onOk(AmbilWarnaDialog dialog, int color) {
-                pressedColor = color;
-                invalidate();
-            }
-        });
-        colorDialog.show();
-    }
-    */
 
     protected void actionEnableMove() {
         currentMode = Mode.Move;
@@ -158,12 +239,11 @@ public abstract class VirtualControllerElement extends View {
     }
 
     protected int getDefaultColor() {
-        if (virtualController.getControllerMode() == VirtualController.ControllerMode.MoveButtons)
-            return configMoveColor;
-        else if (virtualController.getControllerMode() == VirtualController.ControllerMode.ResizeButtons)
-            return configResizeColor;
-        else
-            return normalColor;
+        return normalColor;
+    }
+
+    protected int getPressedColor() {
+        return pressedColor;
     }
 
     protected int getDefaultStrokeWidth() {
@@ -171,64 +251,12 @@ public abstract class VirtualControllerElement extends View {
         return (int)(screen.heightPixels*0.004f);
     }
 
-    protected void showConfigurationDialog() {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(getContext());
-
-        alertBuilder.setTitle("Configuration");
-
-        CharSequence functions[] = new CharSequence[]{
-                "Move",
-                "Resize",
-            /*election
-            "Set n
-            Disable color sormal color",
-            "Set pressed color",
-            */
-                "Cancel"
-        };
-
-        alertBuilder.setItems(functions, new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0: { // move
-                        actionEnableMove();
-                        break;
-                    }
-                    case 1: { // resize
-                        actionEnableResize();
-                        break;
-                    }
-                /*
-                case 2: { // set default color
-                    actionShowNormalColorChooser();
-                    break;
-                }
-                case 3: { // set pressed color
-                    actionShowPressedColorChooser();
-                    break;
-                }
-                */
-                    default: { // cancel
-                        actionCancel();
-                        break;
-                    }
-                }
-            }
-        });
-        AlertDialog alert = alertBuilder.create();
-        // show menu
-        alert.show();
-    }
+    private long downTime;
+    private static final int TAP_TIMEOUT = 200;
+    private static final int MOVE_THRESHOLD = 10;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        // Ignore secondary touches on controls
-        //
-        // NB: We can get an additional pointer down if the user touches a non-StreamView area
-        // while also touching an OSC control, even if that pointer down doesn't correspond to
-        // an area of the OSC control.
         if (event.getActionIndex() != 0) {
             return true;
         }
@@ -239,6 +267,7 @@ public abstract class VirtualControllerElement extends View {
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: {
+                downTime = System.currentTimeMillis();
                 position_pressed_x = event.getX();
                 position_pressed_y = event.getY();
                 startSize_x = getWidth();
@@ -277,6 +306,23 @@ public abstract class VirtualControllerElement extends View {
             }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
+                long duration = System.currentTimeMillis() - downTime;
+                float deltaX = Math.abs(event.getX() - position_pressed_x);
+                float deltaY = Math.abs(event.getY() - position_pressed_y);
+
+                if (duration < TAP_TIMEOUT && deltaX < MOVE_THRESHOLD && deltaY < MOVE_THRESHOLD) {
+                    float absX = getX() + event.getX();
+                    float absY = getY() + event.getY();
+                    java.util.List<VirtualControllerElement> at = virtualController.getElementsAt(absX, absY);
+                    if (at.size() > 1) {
+                        int currentIndex = at.indexOf(this);
+                        int nextIndex = (currentIndex + 1) % at.size();
+                        virtualController.setSelectedElement(at.get(nextIndex));
+                    } else {
+                        virtualController.setSelectedElement(VirtualControllerElement.this);
+                    }
+                }
+
                 actionCancel();
                 return true;
             }
@@ -296,20 +342,14 @@ public abstract class VirtualControllerElement extends View {
         }
     }
 
-    public void setColors(int normalColor, int pressedColor) {
-        this.normalColor = normalColor;
-        this.pressedColor = pressedColor;
-
+    public void setOpacity(int opacity) {
+        _opacity = opacity;
+        updateColors();
         invalidate();
     }
 
-
-    public void setOpacity(int opacity) {
-        int hexOpacity = opacity * 255 / 100;
-        this.normalColor = (hexOpacity << 24) | (normalColor & 0x00FFFFFF);
-        this.pressedColor = (hexOpacity << 24) | (pressedColor & 0x00FFFFFF);
-
-        invalidate();
+    public int getOpacity() {
+        return _opacity;
     }
 
     protected final float getPercent(float value, float percent) {
@@ -320,6 +360,192 @@ public abstract class VirtualControllerElement extends View {
         return getWidth() > getHeight() ? getHeight() : getWidth();
     }
 
+    public void setKeyboardMapping(boolean keyboardMapping) {
+        _isKeyboardMapping = keyboardMapping;
+        invalidate();
+    }
+
+    public boolean isKeyboardMapping() {
+        return _isKeyboardMapping;
+    }
+
+    public void setMappedKeyCode(short mappedKeyCode) {
+        _mappedKeyCode = mappedKeyCode;
+        invalidate();
+    }
+
+    public short getMappedKeyCode() {
+        return _mappedKeyCode;
+    }
+
+    public void setMouseMapping(boolean mouseMapping) {
+        _isMouseMapping = mouseMapping;
+        invalidate();
+    }
+
+    public boolean isMouseMapping() {
+        return _isMouseMapping;
+    }
+
+    public void setCombinedMapping(boolean combinedMapping) {
+        _isCombinedMapping = combinedMapping;
+        invalidate();
+    }
+
+    public boolean isCombinedMapping() {
+        return _isCombinedMapping;
+    }
+
+    public void setMouseAction(MouseAction mouseAction) {
+        _mouseAction = mouseAction;
+        invalidate();
+    }
+
+    public void updateGlobalSensitivity() {
+        try {
+            _globalSensitivity = PreferenceConfiguration.readPreferences(getContext()).mouseSensitivity / 100.0f;
+        } catch (Exception e) {
+            _globalSensitivity = 1.0f;
+        }
+    }
+
+    public MouseAction getMouseAction() {
+        return _mouseAction;
+    }
+
+    public void setGamepadFlag(int gamepadFlag) {
+        _gamepadFlag = gamepadFlag;
+        invalidate();
+    }
+
+    public int getGamepadFlag() {
+        return _gamepadFlag;
+    }
+
+    public void setSensitivity(float sensitivity) {
+        _sensitivity = sensitivity;
+    }
+
+    public float getSensitivity() {
+        return _sensitivity;
+    }
+
+    public void setMappedKeyUp(short mappedKeyUp) {
+        _mappedKeyUp = mappedKeyUp;
+    }
+
+    public short getMappedKeyUp() {
+        return _mappedKeyUp;
+    }
+
+    public void setMappedKeyDown(short mappedKeyDown) {
+        _mappedKeyDown = mappedKeyDown;
+    }
+
+    public short getMappedKeyDown() {
+        return _mappedKeyDown;
+    }
+
+    public void setMappedKeyLeft(short mappedKeyLeft) {
+        _mappedKeyLeft = mappedKeyLeft;
+    }
+
+    public short getMappedKeyLeft() {
+        return _mappedKeyLeft;
+    }
+
+    public void setMappedKeyRight(short mappedKeyRight) {
+        _mappedKeyRight = mappedKeyRight;
+    }
+
+    public short getMappedKeyRight() {
+        return _mappedKeyRight;
+    }
+
+    public void setMappedDirUpGamepadFlag(int flag) { _mappedDirUpGamepadFlag = flag; invalidate(); }
+    public int getMappedDirUpGamepadFlag() { return _mappedDirUpGamepadFlag; }
+    public void setMappedDirDownGamepadFlag(int flag) { _mappedDirDownGamepadFlag = flag; invalidate(); }
+    public int getMappedDirDownGamepadFlag() { return _mappedDirDownGamepadFlag; }
+    public void setMappedDirLeftGamepadFlag(int flag) { _mappedDirLeftGamepadFlag = flag; invalidate(); }
+    public int getMappedDirLeftGamepadFlag() { return _mappedDirLeftGamepadFlag; }
+    public void setMappedDirRightGamepadFlag(int flag) { _mappedDirRightGamepadFlag = flag; invalidate(); }
+    public int getMappedDirRightGamepadFlag() { return _mappedDirRightGamepadFlag; }
+
+    public void setMappedDirUpMouseAction(MouseAction action) { _mappedDirUpMouseAction = action; invalidate(); }
+    public MouseAction getMappedDirUpMouseAction() { return _mappedDirUpMouseAction; }
+    public void setMappedDirDownMouseAction(MouseAction action) { _mappedDirDownMouseAction = action; invalidate(); }
+    public MouseAction getMappedDirDownMouseAction() { return _mappedDirDownMouseAction; }
+    public void setMappedDirLeftMouseAction(MouseAction action) { _mappedDirLeftMouseAction = action; invalidate(); }
+    public MouseAction getMappedDirLeftMouseAction() { return _mappedDirLeftMouseAction; }
+    public void setMappedDirRightMouseAction(MouseAction action) { _mappedDirRightMouseAction = action; invalidate(); }
+    public MouseAction getMappedDirRightMouseAction() { return _mappedDirRightMouseAction; }
+
+    public void setCustomColor(int color) {
+        _customColor = color;
+        updateColors();
+        invalidate();
+    }
+
+    private void updateColors() {
+        int hexOpacity = _opacity * 255 / 100;
+        if (_customColor != 0) {
+            this.normalColor = (hexOpacity << 24) | (_customColor & 0x00FFFFFF);
+            
+            // Generate a darker color for the pressed state
+            int r = android.graphics.Color.red(_customColor);
+            int g = android.graphics.Color.green(_customColor);
+            int b = android.graphics.Color.blue(_customColor);
+            int darker = android.graphics.Color.rgb((int)(r * 0.7), (int)(g * 0.7), (int)(b * 0.7));
+            
+            this.pressedColor = (hexOpacity << 24) | (darker & 0x00FFFFFF);
+        } else {
+            this.normalColor = (hexOpacity << 24) | 0x00888888;
+            this.pressedColor = (hexOpacity << 24) | 0x000000FF;
+        }
+    }
+
+    public int getCustomColor() {
+        return _customColor;
+    }
+
+    public void setRotation(float rotation) {
+        _rotation = rotation;
+        invalidate();
+    }
+
+    public float getRotation() {
+        return _rotation;
+    }
+
+    public void setToggleMode(boolean toggleMode) {
+        _isToggleMode = toggleMode;
+    }
+
+    public boolean isToggleMode() {
+        return _isToggleMode;
+    }
+
+    public void setCustomText(String text) {
+        _customText = text;
+        invalidate();
+    }
+
+    public String getCustomText() {
+        return _customText;
+    }
+
+    public void setShape(Shape shape) {
+        this.shape = shape;
+        invalidate();
+    }
+
+    public Shape getShape() {
+        return shape;
+    }
+
+    public int getElementId() {
+        return elementId;
+    }
 
     public JSONObject getConfiguration() throws JSONException {
         JSONObject configuration = new JSONObject();
@@ -330,6 +556,36 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("TOP", layoutParams.topMargin);
         configuration.put("WIDTH", layoutParams.width);
         configuration.put("HEIGHT", layoutParams.height);
+        configuration.put("IS_KBD", _isKeyboardMapping);
+        configuration.put("KBD_CODE", _mappedKeyCode);
+        configuration.put("KBD_UP", _mappedKeyUp);
+        configuration.put("KBD_DOWN", _mappedKeyDown);
+        configuration.put("KBD_LEFT", _mappedKeyLeft);
+        configuration.put("KBD_RIGHT", _mappedKeyRight);
+        configuration.put("SHAPE", shape.name());
+        configuration.put("OPACITY", _opacity);
+        configuration.put("TYPE", this.getClass().getSimpleName());
+        configuration.put("IS_STICK", (this instanceof AnalogStick));
+        configuration.put("IS_MOUSE", _isMouseMapping);
+        configuration.put("IS_COMBO", _isCombinedMapping);
+        configuration.put("MOUSE_ACT", _mouseAction.name());
+        configuration.put("GP_FLAG", _gamepadFlag);
+        configuration.put("SENSE", _sensitivity);
+        configuration.put("COLOR", _customColor);
+        configuration.put("ROT", _rotation);
+        configuration.put("TOGGLE", _isToggleMode);
+        configuration.put("TOGGLED", _isToggled);
+        if (_customText != null) configuration.put("TXT", _customText);
+
+        configuration.put("UP_GP", _mappedDirUpGamepadFlag);
+        configuration.put("DOWN_GP", _mappedDirDownGamepadFlag);
+        configuration.put("LEFT_GP", _mappedDirLeftGamepadFlag);
+        configuration.put("RIGHT_GP", _mappedDirRightGamepadFlag);
+
+        configuration.put("UP_MOUSE", _mappedDirUpMouseAction.name());
+        configuration.put("DOWN_MOUSE", _mappedDirDownMouseAction.name());
+        configuration.put("LEFT_MOUSE", _mappedDirLeftMouseAction.name());
+        configuration.put("RIGHT_MOUSE", _mappedDirRightMouseAction.name());
 
         return configuration;
     }
@@ -341,6 +597,58 @@ public abstract class VirtualControllerElement extends View {
         layoutParams.topMargin = configuration.getInt("TOP");
         layoutParams.width = configuration.getInt("WIDTH");
         layoutParams.height = configuration.getInt("HEIGHT");
+        _isKeyboardMapping = configuration.optBoolean("IS_KBD", false);
+        _mappedKeyCode = (short) configuration.optInt("KBD_CODE", 0);
+        _mappedKeyUp = (short) configuration.optInt("KBD_UP", 0);
+        _mappedKeyDown = (short) configuration.optInt("KBD_DOWN", 0);
+        _mappedKeyLeft = (short) configuration.optInt("KBD_LEFT", 0);
+        _mappedKeyRight = (short) configuration.optInt("KBD_RIGHT", 0);
+
+        _mappedDirUpGamepadFlag = configuration.optInt("UP_GP", 0);
+        _mappedDirDownGamepadFlag = configuration.optInt("DOWN_GP", 0);
+        _mappedDirLeftGamepadFlag = configuration.optInt("LEFT_GP", 0);
+        _mappedDirRightGamepadFlag = configuration.optInt("RIGHT_GP", 0);
+
+        try {
+            _mappedDirUpMouseAction = MouseAction.valueOf(configuration.optString("UP_MOUSE", MouseAction.None.name()));
+            _mappedDirDownMouseAction = MouseAction.valueOf(configuration.optString("DOWN_MOUSE", MouseAction.None.name()));
+            _mappedDirLeftMouseAction = MouseAction.valueOf(configuration.optString("LEFT_MOUSE", MouseAction.None.name()));
+            _mappedDirRightMouseAction = MouseAction.valueOf(configuration.optString("RIGHT_MOUSE", MouseAction.None.name()));
+        } catch (Exception e) {
+            _mappedDirUpMouseAction = _mappedDirDownMouseAction = _mappedDirLeftMouseAction = _mappedDirRightMouseAction = MouseAction.None;
+        }
+
+        _isMouseMapping = configuration.optBoolean("IS_MOUSE", false);
+        _isCombinedMapping = configuration.optBoolean("IS_COMBO", false);
+        _gamepadFlag = configuration.optInt("GP_FLAG", 0);
+        _sensitivity = (float) configuration.optDouble("SENSE", 1.0);
+        _customColor = configuration.optInt("COLOR", 0);
+        _rotation = (float) configuration.optDouble("ROT", 0);
+        _isToggleMode = configuration.optBoolean("TOGGLE", false);
+        _isToggled = configuration.optBoolean("TOGGLED", false);
+        
+        if (configuration.has("TXT") && !configuration.isNull("TXT")) {
+            _customText = configuration.getString("TXT");
+            if ("null".equals(_customText)) _customText = null;
+        } else {
+            _customText = null;
+        }
+        
+        String mouseActName = configuration.optString("MOUSE_ACT", MouseAction.None.name());
+        try {
+            _mouseAction = MouseAction.valueOf(mouseActName);
+        } catch (Exception e) {
+            _mouseAction = MouseAction.None;
+        }
+        
+        String shapeName = configuration.optString("SHAPE", Shape.Circle.name());
+        try {
+            shape = Shape.valueOf(shapeName);
+        } catch (IllegalArgumentException e) {
+            shape = Shape.Circle;
+        }
+
+        setOpacity(configuration.optInt("OPACITY", 100));
 
         requestLayout();
     }

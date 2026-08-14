@@ -9,12 +9,21 @@ import android.content.Context;
 import com.limelight.nvstream.input.ControllerPacket;
 
 public class LeftAnalogStick extends AnalogStick {
+
     public LeftAnalogStick(final VirtualController controller, final Context context) {
-        super(controller, context, EID_LS);
+        this(controller, context, EID_LS);
+    }
+
+    public LeftAnalogStick(final VirtualController controller, final Context context, int id) {
+        super(controller, context, id);
 
         addAnalogStickListener(new AnalogStick.AnalogStickListener() {
             @Override
             public void onMovement(float x, float y) {
+                if (isKeyboardMapping() || isMouseMapping()) {
+                    return;
+                }
+
                 VirtualController.ControllerInputContext inputContext =
                         controller.getControllerInputContext();
                 inputContext.leftStickX = (short) (x * 0x7FFE);
@@ -29,6 +38,9 @@ public class LeftAnalogStick extends AnalogStick {
 
             @Override
             public void onDoubleClick() {
+                if (isKeyboardMapping()) {
+                    return;
+                }
                 VirtualController.ControllerInputContext inputContext =
                         controller.getControllerInputContext();
                 inputContext.inputMap |= ControllerPacket.LS_CLK_FLAG;
@@ -38,6 +50,9 @@ public class LeftAnalogStick extends AnalogStick {
 
             @Override
             public void onRevoke() {
+                if (isKeyboardMapping()) {
+                    return;
+                }
                 VirtualController.ControllerInputContext inputContext =
                         controller.getControllerInputContext();
                 inputContext.inputMap &= ~ControllerPacket.LS_CLK_FLAG;

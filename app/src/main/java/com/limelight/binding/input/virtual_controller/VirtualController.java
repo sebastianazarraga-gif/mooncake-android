@@ -22,7 +22,7 @@ import java.util.List;
 
 public class VirtualController {
     public static class ControllerInputContext {
-        public short inputMap = 0x0000;
+        public int inputMap = 0x0000;
         public byte leftTrigger = 0x00;
         public byte rightTrigger = 0x00;
         public short rightStickX = 0x0000;
@@ -58,6 +58,42 @@ public class VirtualController {
     private Button buttonConfigure = null;
 
     private List<VirtualControllerElement> elements = new ArrayList<>();
+    private VirtualControllerElement selectedElement = null;
+    private boolean gridSnapping = false;
+
+    public interface SelectionListener {
+        void onElementSelected(VirtualControllerElement element);
+    }
+    private SelectionListener selectionListener;
+
+    public void setSelectionListener(SelectionListener listener) {
+        this.selectionListener = listener;
+    }
+
+    public void setSelectedElement(VirtualControllerElement element) {
+        if (selectedElement != null) {
+            selectedElement.invalidate();
+        }
+        selectedElement = element;
+        if (selectedElement != null) {
+            selectedElement.invalidate();
+        }
+        if (selectionListener != null) {
+            selectionListener.onElementSelected(element);
+        }
+    }
+
+    public VirtualControllerElement getSelectedElement() {
+        return selectedElement;
+    }
+
+    public void setGridSnapping(boolean enabled) {
+        this.gridSnapping = enabled;
+    }
+
+    public boolean isGridSnapping() {
+        return gridSnapping;
+    }
 
     public VirtualController(final ControllerHandler controllerHandler, FrameLayout layout, final Context context) {
         this.controllerHandler = controllerHandler;
@@ -98,6 +134,10 @@ public class VirtualController {
 
     }
 
+    public ControllerHandler getControllerHandler() {
+        return controllerHandler;
+    }
+
     Handler getHandler() {
         return handler;
     }
@@ -116,6 +156,11 @@ public class VirtualController {
         }
 
         buttonConfigure.setVisibility(View.VISIBLE);
+    }
+
+    public void removeElement(VirtualControllerElement element) {
+        elements.remove(element);
+        frame_layout.removeView(element);
     }
 
     public void removeElements() {
@@ -146,6 +191,22 @@ public class VirtualController {
         return elements;
     }
 
+    public FrameLayout getFrameLayout() {
+        return frame_layout;
+    }
+
+    public List<VirtualControllerElement> getElementsAt(float x, float y) {
+        List<VirtualControllerElement> result = new ArrayList<>();
+        for (VirtualControllerElement element : elements) {
+            float relX = x - element.getX();
+            float relY = y - element.getY();
+            if (relX >= 0 && relX <= element.getWidth() && relY >= 0 && relY <= element.getHeight()) {
+                result.add(element);
+            }
+        }
+        return result;
+    }
+
     private static final void _DBG(String text) {
         if (_PRINT_DEBUG_INFORMATION) {
             LimeLog.info("VirtualController: " + text);
@@ -153,23 +214,35 @@ public class VirtualController {
     }
 
     public void refreshLayout() {
-        removeElements();
+        frame_layout.post(new Runnable() {
+            @Override
+            public void run() {
+                // Clear existing elements before re-adding
+                removeElements();
 
-        DisplayMetrics screen = context.getResources().getDisplayMetrics();
+                if (controllerHandler != null) {
+                    DisplayMetrics screen = context.getResources().getDisplayMetrics();
 
-        int buttonSize = (int)(screen.heightPixels*0.06f);
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(buttonSize, buttonSize);
-        params.leftMargin = 15;
-        params.topMargin = 15;
-        frame_layout.addView(buttonConfigure, params);
+                    int buttonSize = (int)(screen.heightPixels * 0.06f);
+                    FrameLayout.LayoutParams params =
+                            new FrameLayout.LayoutParams(buttonSize, buttonSize);
+                    params.leftMargin = 15;
+                    params.topMargin = 15;
+                    if (buttonConfigure.getParent() == null) {
+                        frame_layout.addView(buttonConfigure, params);
+                    }
+                }
 
-        // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context);
+                // Create the layout AFTER FrameLayout has been measured
+                VirtualControllerConfigurationLoader.createDefaultLayout(
+                        VirtualController.this, context);
 
-        // Apply user preferences onto the default layout
-        VirtualControllerConfigurationLoader.loadFromPreferences(this, context);
+                // Apply saved positions
+                VirtualControllerConfigurationLoader.loadFromPreferences(
+                        VirtualController.this, context);
+            }
+        });
     }
-
     public ControllerMode getControllerMode() {
         return currentMode;
     }

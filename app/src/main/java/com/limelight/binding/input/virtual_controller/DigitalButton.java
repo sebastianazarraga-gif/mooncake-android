@@ -12,6 +12,13 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 
+import com.limelight.binding.input.ControllerHandler;
+import com.limelight.nvstream.input.MouseButtonPacket;
+import com.limelight.preferences.PreferenceConfiguration;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +52,7 @@ public class DigitalButton extends VirtualControllerElement {
     private String text = "";
     private int icon = -1;
     private long timerLongClickTimeout = 3000;
+    private boolean lastReportedState = false;
     private final Runnable longClickRunnable = new Runnable() {
         @Override
         public void run() {
@@ -57,6 +65,26 @@ public class DigitalButton extends VirtualControllerElement {
 
     private int layer;
     private DigitalButton movingButton = null;
+
+    private final Runnable mouseRepeatRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isPressed() || _isToggled) {
+                ControllerHandler ch = virtualController.getControllerHandler();
+                if (ch != null) {
+                    float totalSense = _sensitivity * _globalSensitivity;
+                    
+                    if (_mouseAction == MouseAction.MoveUp) ch.reportVirtualMouseMove((short)0, (short)(-20 * totalSense));
+                    else if (_mouseAction == MouseAction.MoveDown) ch.reportVirtualMouseMove((short)0, (short)(20 * totalSense));
+                    else if (_mouseAction == MouseAction.MoveLeft) ch.reportVirtualMouseMove((short)(-20 * totalSense), (short)0);
+                    else if (_mouseAction == MouseAction.MoveRight) ch.reportVirtualMouseMove((short)(20 * totalSense), (short)0);
+                    else if (_mouseAction == MouseAction.ScrollUp) ch.reportVirtualMouseScroll((byte)(2 * totalSense));
+                    else if (_mouseAction == MouseAction.ScrollDown) ch.reportVirtualMouseScroll((byte)(-2 * totalSense));
+                }
+                virtualController.getHandler().postDelayed(this, 33);
+            }
+        }
+    };
 
     boolean inRange(float x, float y) {
         return (this.getX() < x && this.getX() + this.getWidth() > x) &&
@@ -142,14 +170,37 @@ public class DigitalButton extends VirtualControllerElement {
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setStrokeWidth(getDefaultStrokeWidth());
 
-        paint.setColor(isPressed() ? pressedColor : getDefaultColor());
-        paint.setStyle(Paint.Style.STROKE);
-
+        int color = (isPressed() || _isToggled) ? getPressedColor() : getDefaultColor();
+        
+        // Draw fill
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(color & 0x40FFFFFF); // 25% opacity fill
+        
         rect.left = rect.top = paint.getStrokeWidth();
         rect.right = getWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
 
-        canvas.drawOval(rect, paint);
+        if (shape == Shape.Square) {
+            canvas.drawRect(rect, paint);
+        } else if (shape == Shape.SquareRounded) {
+            float radius = getPercent(getCorrectWidth(), 15);
+            canvas.drawRoundRect(rect, radius, radius, paint);
+        } else {
+            canvas.drawOval(rect, paint);
+        }
+
+        // Draw stroke
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(color);
+        
+        if (shape == Shape.Square) {
+            canvas.drawRect(rect, paint);
+        } else if (shape == Shape.SquareRounded) {
+            float radius = getPercent(getCorrectWidth(), 15);
+            canvas.drawRoundRect(rect, radius, radius, paint);
+        } else {
+            canvas.drawOval(rect, paint);
+        }
 
         if (icon != -1) {
             Drawable d = getResources().getDrawable(icon);
@@ -158,35 +209,112 @@ public class DigitalButton extends VirtualControllerElement {
         } else {
             paint.setStyle(Paint.Style.FILL_AND_STROKE);
             paint.setStrokeWidth(getDefaultStrokeWidth()/2);
-            canvas.drawText(text, getPercent(getWidth(), 50), getPercent(getHeight(), 63), paint);
+            String display = _customText != null ? _customText : text;
+            canvas.drawText(display, getPercent(getWidth(), 50), getPercent(getHeight(), 63), paint);
         }
     }
 
     private void onClickCallback() {
         _DBG("clicked");
-        // notify listeners
-        for (DigitalButtonListener listener : listeners) {
-            listener.onClick();
+        
+        if (_isToggleMode) {
+            _isToggled = !_isToggled;
+            applyBindingState(_isToggled);
+            
+            if (_isToggled && (isMouseMapping() || isCombinedMapping())) {
+                if (_mouseAction == MouseAction.MoveUp || _mouseAction == MouseAction.MoveDown ||
+                    _mouseAction == MouseAction.MoveLeft || _mouseAction == MouseAction.MoveRight ||
+                    _mouseAction == MouseAction.ScrollUp || _mouseAction == MouseAction.ScrollDown) {
+                    virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+                    virtualController.getHandler().post(mouseRepeatRunnable);
+                }
+            } else if (!_isToggled) {
+                virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+            }
+            
+            invalidate();
+            return;
         }
 
+        applyBindingState(true);
+
+        if (isMouseMapping() || isCombinedMapping()) {
+            if (_mouseAction == MouseAction.MoveUp || _mouseAction == MouseAction.MoveDown ||
+                _mouseAction == MouseAction.MoveLeft || _mouseAction == MouseAction.MoveRight ||
+                _mouseAction == MouseAction.ScrollUp || _mouseAction == MouseAction.ScrollDown) {
+                virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+                virtualController.getHandler().post(mouseRepeatRunnable);
+            }
+        }
+        
         virtualController.getHandler().removeCallbacks(longClickRunnable);
         virtualController.getHandler().postDelayed(longClickRunnable, timerLongClickTimeout);
     }
 
+    private void applyBindingState(boolean active) {
+        if (lastReportedState == active) return;
+        lastReportedState = active;
+        
+        ControllerHandler ch = virtualController.getControllerHandler();
+        if (ch == null) return;
+
+        if (isKeyboardMapping() || isCombinedMapping()) {
+            if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, active);
+        }
+        
+        if (isMouseMapping() || isCombinedMapping()) {
+            if (_mouseAction == MouseAction.LeftClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_LEFT, active);
+            else if (_mouseAction == MouseAction.RightClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_RIGHT, active);
+            else if (_mouseAction == MouseAction.MiddleClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_MIDDLE, active);
+        }
+        
+        if (!isKeyboardMapping() && !isMouseMapping() || isCombinedMapping()) {
+            // If we have a gamepad flag, apply it
+            if (_gamepadFlag != 0) {
+                VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
+                if (active) inputContext.inputMap |= _gamepadFlag;
+                else inputContext.inputMap &= ~_gamepadFlag;
+                virtualController.sendControllerInputContext();
+            } else {
+                onDefaultGamepadAction(active);
+            }
+
+            // notify listeners
+            if (active) {
+                for (DigitalButtonListener listener : listeners) {
+                    listener.onClick();
+                }
+            } else {
+                for (DigitalButtonListener listener : listeners) {
+                    listener.onRelease();
+                }
+            }
+        }
+    }
+
+    protected void onDefaultGamepadAction(boolean active) {
+        // To be overridden by specialized buttons like triggers
+    }
+
     private void onLongClickCallback() {
         _DBG("long click");
-        // notify listeners
-        for (DigitalButtonListener listener : listeners) {
-            listener.onLongClick();
+
+        if (!isKeyboardMapping()) {
+            // notify listeners
+            for (DigitalButtonListener listener : listeners) {
+                listener.onLongClick();
+            }
         }
     }
 
     private void onReleaseCallback() {
         _DBG("released");
-        // notify listeners
-        for (DigitalButtonListener listener : listeners) {
-            listener.onRelease();
-        }
+        
+        if (_isToggleMode) return;
+
+        applyBindingState(false);
+
+        virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
 
         // We may be called for a release without a prior click
         virtualController.getHandler().removeCallbacks(longClickRunnable);
@@ -201,9 +329,12 @@ public class DigitalButton extends VirtualControllerElement {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
+                updateGlobalSensitivity();
                 movingButton = null;
                 setPressed(true);
                 onClickCallback();
+
+                checkMovementForAllButtons(x, y);
 
                 invalidate();
 
@@ -229,5 +360,20 @@ public class DigitalButton extends VirtualControllerElement {
             }
         }
         return true;
+    }
+
+    @Override
+    public JSONObject getConfiguration() throws JSONException {
+        JSONObject config = super.getConfiguration();
+        config.put("TEXT", text);
+        return config;
+    }
+
+    @Override
+    public void loadConfiguration(JSONObject configuration) throws JSONException {
+        super.loadConfiguration(configuration);
+        if (configuration.has("TEXT")) {
+            this.text = configuration.getString("TEXT");
+        }
     }
 }

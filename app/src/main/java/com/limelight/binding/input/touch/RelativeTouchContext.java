@@ -258,6 +258,11 @@ public class RelativeTouchContext implements TouchContext {
                 deltaX = (int) Math.round((double) Math.abs(deltaX) * xFactor);
                 deltaY = (int) Math.round((double) Math.abs(deltaY) * yFactor);
 
+                // Apply mouse sensitivity
+                float sensitivity = prefConfig.mouseSensitivity / 100.0f;
+                deltaX = (int) (deltaX * sensitivity);
+                deltaY = (int) (deltaY * sensitivity);
+
                 // Fix up the signs
                 if (eventX < lastTouchX) {
                     deltaX = -deltaX;

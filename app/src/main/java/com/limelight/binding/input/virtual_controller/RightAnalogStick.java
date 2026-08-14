@@ -15,6 +15,9 @@ public class RightAnalogStick extends AnalogStick {
         addAnalogStickListener(new AnalogStick.AnalogStickListener() {
             @Override
             public void onMovement(float x, float y) {
+                if (isKeyboardMapping() || isMouseMapping()) {
+                    return;
+                }
                 VirtualController.ControllerInputContext inputContext =
                         controller.getControllerInputContext();
                 inputContext.rightStickX = (short) (x * 0x7FFE);
@@ -29,6 +32,9 @@ public class RightAnalogStick extends AnalogStick {
 
             @Override
             public void onDoubleClick() {
+                if (isKeyboardMapping()) {
+                    return;
+                }
                 VirtualController.ControllerInputContext inputContext =
                         controller.getControllerInputContext();
                 inputContext.inputMap |= ControllerPacket.RS_CLK_FLAG;
@@ -38,6 +44,9 @@ public class RightAnalogStick extends AnalogStick {
 
             @Override
             public void onRevoke() {
+                if (isKeyboardMapping()) {
+                    return;
+                }
                 VirtualController.ControllerInputContext inputContext =
                         controller.getControllerInputContext();
                 inputContext.inputMap &= ~ControllerPacket.RS_CLK_FLAG;

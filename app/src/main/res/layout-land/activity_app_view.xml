@@ -8,29 +8,31 @@
 
     <RelativeLayout
         android:id="@+id/headerLayout"
-        android:layout_width="match_parent"
-        android:layout_height="65dp"
+        android:layout_width="70dp"
+        android:layout_height="match_parent"
         android:background="@color/black_purple"
-        android:elevation="4dp">
+        android:elevation="4dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true">
 
         <TextView
             android:id="@+id/appListText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="20dp"
-            android:layout_marginLeft="20dp"
+            android:layout_centerInParent="true"
+            android:rotation="-90"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:singleLine="true" />
     </RelativeLayout>
 
     <FrameLayout
         android:id="@+id/appFragmentContainer"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/headerLayout"
-        android:layout_alignParentBottom="true"
+        android:layout_height="match_parent"
+        android:layout_toEndOf="@id/headerLayout"
+        android:layout_toRightOf="@id/headerLayout"
         android:gravity="center" />
 
 </RelativeLayout>

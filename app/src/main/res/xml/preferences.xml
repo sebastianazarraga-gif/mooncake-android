@@ -144,6 +144,15 @@
             android:title="@string/title_checkbox_absolute_mouse_mode"
             android:summary="@string/summary_checkbox_absolute_mouse_mode"
             android:defaultValue="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:key="seekbar_mouse_sensitivity"
+            android:defaultValue="100"
+            seekbar:min="10"
+            android:max="500"
+            seekbar:step="5"
+            android:summary="@string/summary_seekbar_mouse_sensitivity"
+            android:text="@string/suffix_seekbar_mouse_sensitivity"
+            android:title="@string/title_seekbar_mouse_sensitivity"/>
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/category_on_screen_controls_settings"
         android:key="category_onscreen_controls">

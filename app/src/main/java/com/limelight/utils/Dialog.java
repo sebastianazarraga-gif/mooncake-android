@@ -93,14 +93,26 @@ public class Dialog implements Runnable {
             }
         });
         alert.setOnShowListener(new DialogInterface.OnShowListener(){
-
             @Override
             public void onShow(DialogInterface dialog) {
                 // Set focus to the OK button by default
                 Button button = alert.getButton(AlertDialog.BUTTON_POSITIVE);
-                button.setFocusable(true);
-                button.setFocusableInTouchMode(true);
-                button.requestFocus();
+                if (button != null) {
+                    button.setTextColor(activity.getResources().getColor(R.color.purple_accent));
+                    button.setFocusable(true);
+                    button.setFocusableInTouchMode(true);
+                    button.requestFocus();
+                }
+
+                Button negativeButton = alert.getButton(AlertDialog.BUTTON_NEGATIVE);
+                if (negativeButton != null) {
+                    negativeButton.setTextColor(activity.getResources().getColor(R.color.purple_accent));
+                }
+
+                Button neutralButton = alert.getButton(AlertDialog.BUTTON_NEUTRAL);
+                if (neutralButton != null) {
+                    neutralButton.setTextColor(activity.getResources().getColor(R.color.purple_accent));
+                }
             }
         });
 

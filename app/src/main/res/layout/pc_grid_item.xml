@@ -3,10 +3,13 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:padding="20dp">
+
     <RelativeLayout
         android:id="@+id/grid_image_layout"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@drawable/pc_card_rounded"
+        android:clipToOutline="true">
         <ImageView
             android:id="@+id/grid_image"
             android:layout_centerHorizontal="true"
@@ -37,6 +40,7 @@
         android:layout_marginTop="10dp"
         android:layout_centerHorizontal="true"
         android:gravity="center"
+        android:textColor="#FFFFFF"
         android:textSize="18sp" >
     </TextView>
 </RelativeLayout>

@@ -1,5 +1,6 @@
 package com.limelight;
 
+import android.app.AlertDialog;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -140,6 +141,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         ImageButton settingsButton = findViewById(R.id.settingsButton);
         ImageButton addComputerButton = findViewById(R.id.manuallyAddPc);
         ImageButton helpButton = findViewById(R.id.helpButton);
+        ImageButton controllerButton = findViewById(R.id.controllerButton);
 
         settingsButton.setOnClickListener(new OnClickListener() {
             @Override
@@ -157,7 +159,31 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         helpButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                HelpLauncher.launchSetupGuide(PcView.this);
+                final String[] options = {
+                        getString(R.string.help_option_troubleshoot),
+                        getString(R.string.help_option_setup),
+                        getString(R.string.help_option_youtube)
+                };
+
+                new AlertDialog.Builder(PcView.this)
+                        .setTitle(R.string.help_dialog_title)
+                        .setItems(options, (dialog, which) -> {
+                            if (which == 0) {
+                                HelpLauncher.launchTroubleshooting(PcView.this);
+                            } else if (which == 1) {
+                                HelpLauncher.launchSetupGuide(PcView.this);
+                            } else if (which == 2) {
+                                HelpLauncher.launchYoutube(PcView.this);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+            }
+        });
+        controllerButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(PcView.this, ConfigureVirtualControllerActivity.class));
             }
         });
 

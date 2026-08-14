@@ -48,6 +48,7 @@ public class PreferenceConfiguration {
     private static final String LEGACY_DISABLE_FRAME_DROP_PREF_STRING = "checkbox_disable_frame_drop";
     private static final String ENABLE_HDR_PREF_STRING = "checkbox_enable_hdr";
     private static final String ENABLE_PIP_PREF_STRING = "checkbox_enable_pip";
+    private static final String MOUSE_SENSITIVITY_PREF_STRING = "seekbar_mouse_sensitivity";
     private static final String ENABLE_PERF_OVERLAY_STRING = "checkbox_enable_perf_overlay";
     private static final String BIND_ALL_USB_STRING = "checkbox_usb_bind_all";
     private static final String MOUSE_EMULATION_STRING = "checkbox_mouse_emulation";
@@ -77,6 +78,7 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_HOST_AUDIO = false;
     private static final int DEFAULT_DEADZONE = 7;
     private static final int DEFAULT_OPACITY = 90;
+    private static final int DEFAULT_MOUSE_SENSITIVITY = 100;
     public static final String DEFAULT_LANGUAGE = "default";
     private static final boolean DEFAULT_MULTI_CONTROLLER = true;
     private static final boolean DEFAULT_USB_DRIVER = true;
@@ -127,6 +129,7 @@ public class PreferenceConfiguration {
     public FormatOption videoFormat;
     public int deadzonePercentage;
     public int oscOpacity;
+    public int mouseSensitivity;
     public boolean stretchVideo, enableSops, playHostAudio, disableWarnings;
     public String language;
     public boolean smallIconMode, multiController, usbDriver, flipFaceButtons;
@@ -567,6 +570,8 @@ public class PreferenceConfiguration {
         config.deadzonePercentage = prefs.getInt(DEADZONE_PREF_STRING, DEFAULT_DEADZONE);
 
         config.oscOpacity = prefs.getInt(OSC_OPACITY_PREF_STRING, DEFAULT_OPACITY);
+
+        config.mouseSensitivity = prefs.getInt(MOUSE_SENSITIVITY_PREF_STRING, DEFAULT_MOUSE_SENSITIVITY);
 
         config.language = prefs.getString(LANGUAGE_PREF_STRING, DEFAULT_LANGUAGE);
 
