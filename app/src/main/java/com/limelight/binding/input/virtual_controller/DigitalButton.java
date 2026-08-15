@@ -259,26 +259,49 @@ public class DigitalButton extends VirtualControllerElement {
         if (ch == null) return;
 
         if (isKeyboardMapping() || isCombinedMapping()) {
-            if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, active);
+            if (active) {
+                if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, true);
+                for (Short code : _extraKeyCodes) {
+                    if (code != 0) ch.reportVirtualKeyboardInput(code, true);
+                }
+            } else {
+                // Release in reverse order
+                for (int i = _extraKeyCodes.size() - 1; i >= 0; i--) {
+                    short code = _extraKeyCodes.get(i);
+                    if (code != 0) ch.reportVirtualKeyboardInput(code, false);
+                }
+                if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false);
+            }
         }
         
         if (isMouseMapping() || isCombinedMapping()) {
-            if (_mouseAction == MouseAction.LeftClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_LEFT, active);
-            else if (_mouseAction == MouseAction.RightClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_RIGHT, active);
-            else if (_mouseAction == MouseAction.MiddleClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_MIDDLE, active);
+            if (active) {
+                applyMouseAction(ch, _mouseAction, true);
+                for (MouseAction action : _extraMouseActions) {
+                    applyMouseAction(ch, action, true);
+                }
+            } else {
+                for (int i = _extraMouseActions.size() - 1; i >= 0; i--) {
+                    applyMouseAction(ch, _extraMouseActions.get(i), false);
+                }
+                applyMouseAction(ch, _mouseAction, false);
+            }
         }
         
         if (!isKeyboardMapping() && !isMouseMapping() || isCombinedMapping()) {
-            // If we have a gamepad flag, apply it
+            // Main gamepad flag
             if (_gamepadFlag != 0) {
-                VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
-                if (active) inputContext.inputMap |= _gamepadFlag;
-                else inputContext.inputMap &= ~_gamepadFlag;
-                virtualController.sendControllerInputContext();
-            } else {
+                applyGpFlag(ch, _gamepadFlag, active);
+            }
+            // Extra gamepad flags
+            for (Integer flag : _extraGamepadFlags) {
+                if (flag != 0) applyGpFlag(ch, flag, active);
+            }
+            
+            if (_gamepadFlag == 0 && _extraGamepadFlags.isEmpty()) {
                 onDefaultGamepadAction(active);
             }
-
+            
             // notify listeners
             if (active) {
                 for (DigitalButtonListener listener : listeners) {
@@ -290,6 +313,19 @@ public class DigitalButton extends VirtualControllerElement {
                 }
             }
         }
+    }
+
+    private void applyGpFlag(ControllerHandler ch, int flag, boolean active) {
+        VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
+        if (active) inputContext.inputMap |= flag;
+        else inputContext.inputMap &= ~flag;
+        virtualController.sendControllerInputContext();
+    }
+
+    private void applyMouseAction(ControllerHandler ch, MouseAction action, boolean active) {
+        if (action == MouseAction.LeftClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_LEFT, active);
+        else if (action == MouseAction.RightClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_RIGHT, active);
+        else if (action == MouseAction.MiddleClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_MIDDLE, active);
     }
 
     protected void onDefaultGamepadAction(boolean active) {
@@ -322,6 +358,10 @@ public class DigitalButton extends VirtualControllerElement {
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
+        if (_isTouchThrough) {
+            dispatchToBackground(event);
+        }
+        
         // get masked (not specific to a pointer) action
         float x = getX() + event.getX();
         float y = getY() + event.getY();
@@ -360,6 +400,23 @@ public class DigitalButton extends VirtualControllerElement {
             }
         }
         return true;
+    }
+
+    private void dispatchToBackground(MotionEvent event) {
+        try {
+            android.view.ViewParent parent = getParent();
+            if (parent instanceof android.view.ViewGroup) {
+                android.view.View bg = ((android.view.ViewGroup) parent).findViewById(com.limelight.R.id.backgroundTouchView);
+                if (bg != null) {
+                    MotionEvent clone = MotionEvent.obtain(event);
+                    clone.offsetLocation(getX(), getY());
+                    bg.dispatchTouchEvent(clone);
+                    clone.recycle();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

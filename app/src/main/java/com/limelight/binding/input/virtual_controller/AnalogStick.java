@@ -116,6 +116,7 @@ public class AnalogStick extends VirtualControllerElement {
              updateGpFlag(newD, dDown, _mappedDirDownGamepadFlag, ctx);
              updateGpFlag(newL, lDown, _mappedDirLeftGamepadFlag, ctx);
              updateGpFlag(newR, rDown, _mappedDirRightGamepadFlag, ctx);
+
              if (newU != uDown || newD != dDown || newL != lDown || newR != rDown) {
                  virtualController.sendControllerInputContext();
              }

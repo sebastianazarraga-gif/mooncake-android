@@ -64,6 +64,7 @@ public abstract class VirtualControllerElement extends View {
 
     protected boolean _isKeyboardMapping = false;
     protected short _mappedKeyCode = 0;
+    protected java.util.List<Short> _extraKeyCodes = new java.util.ArrayList<>();
 
     protected boolean _isMouseMapping = false;
     protected boolean _isCombinedMapping = false;
@@ -71,8 +72,10 @@ public abstract class VirtualControllerElement extends View {
         None, LeftClick, RightClick, MiddleClick, MoveUp, MoveDown, MoveLeft, MoveRight, ScrollUp, ScrollDown
     }
     protected MouseAction _mouseAction = MouseAction.None;
+    protected java.util.List<MouseAction> _extraMouseActions = new java.util.ArrayList<>();
 
     protected int _gamepadFlag = 0;
+    protected java.util.List<Integer> _extraGamepadFlags = new java.util.ArrayList<>();
     protected float _sensitivity = 1.0f;
     protected float _globalSensitivity = 1.0f;
 
@@ -101,6 +104,7 @@ public abstract class VirtualControllerElement extends View {
     protected float _rotation = 0;
     
     protected boolean _isToggleMode = false;
+    protected boolean _isTouchThrough = false;
     protected boolean _isToggled = false;
     protected String _customText = null;
 
@@ -378,6 +382,23 @@ public abstract class VirtualControllerElement extends View {
         return _mappedKeyCode;
     }
 
+    public void setExtraKeyCodes(java.util.List<Short> codes) {
+        _extraKeyCodes = codes;
+        invalidate();
+    }
+
+    public java.util.List<Short> getExtraKeyCodes() {
+        return _extraKeyCodes;
+    }
+
+    public java.util.List<Integer> getExtraGamepadFlags() {
+        return _extraGamepadFlags;
+    }
+
+    public java.util.List<MouseAction> getExtraMouseActions() {
+        return _extraMouseActions;
+    }
+
     public void setMouseMapping(boolean mouseMapping) {
         _isMouseMapping = mouseMapping;
         invalidate();
@@ -525,6 +546,14 @@ public abstract class VirtualControllerElement extends View {
         return _isToggleMode;
     }
 
+    public void setTouchThrough(boolean touchThrough) {
+        _isTouchThrough = touchThrough;
+    }
+
+    public boolean isTouchThrough() {
+        return _isTouchThrough;
+    }
+
     public void setCustomText(String text) {
         _customText = text;
         invalidate();
@@ -558,6 +587,11 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("HEIGHT", layoutParams.height);
         configuration.put("IS_KBD", _isKeyboardMapping);
         configuration.put("KBD_CODE", _mappedKeyCode);
+        
+        org.json.JSONArray extraKeys = new org.json.JSONArray();
+        for (Short s : _extraKeyCodes) extraKeys.put((int)s);
+        configuration.put("KBD_EXTRA", extraKeys);
+
         configuration.put("KBD_UP", _mappedKeyUp);
         configuration.put("KBD_DOWN", _mappedKeyDown);
         configuration.put("KBD_LEFT", _mappedKeyLeft);
@@ -568,12 +602,20 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("IS_STICK", (this instanceof AnalogStick));
         configuration.put("IS_MOUSE", _isMouseMapping);
         configuration.put("IS_COMBO", _isCombinedMapping);
-        configuration.put("MOUSE_ACT", _mouseAction.name());
         configuration.put("GP_FLAG", _gamepadFlag);
+        org.json.JSONArray extraGp = new org.json.JSONArray();
+        for (Integer i : _extraGamepadFlags) extraGp.put((int)i);
+        configuration.put("GP_EXTRA", extraGp);
+
+        configuration.put("MOUSE_ACT", _mouseAction.name());
+        org.json.JSONArray extraMouse = new org.json.JSONArray();
+        for (MouseAction m : _extraMouseActions) extraMouse.put(m.name());
+        configuration.put("MOUSE_EXTRA", extraMouse);
         configuration.put("SENSE", _sensitivity);
         configuration.put("COLOR", _customColor);
         configuration.put("ROT", _rotation);
         configuration.put("TOGGLE", _isToggleMode);
+        configuration.put("TOUCH_THROUGH", _isTouchThrough);
         configuration.put("TOGGLED", _isToggled);
         if (_customText != null) configuration.put("TXT", _customText);
 
@@ -590,6 +632,36 @@ public abstract class VirtualControllerElement extends View {
         return configuration;
     }
 
+    private org.json.JSONArray toJsonArray(java.util.List<Integer> list) {
+        org.json.JSONArray arr = new org.json.JSONArray();
+        for (Integer i : list) arr.put((int)i);
+        return arr;
+    }
+
+    private org.json.JSONArray toJsonArrayMouse(java.util.List<MouseAction> list) {
+        org.json.JSONArray arr = new org.json.JSONArray();
+        for (MouseAction m : list) arr.put(m.name());
+        return arr;
+    }
+
+    private void loadExtraDir(org.json.JSONObject config, String key, java.util.List<Integer> list) {
+        list.clear();
+        org.json.JSONArray arr = config.optJSONArray(key);
+        if (arr != null) {
+            for (int i = 0; i < arr.length(); i++) list.add(arr.optInt(i));
+        }
+    }
+
+    private void loadExtraDirMouse(org.json.JSONObject config, String key, java.util.List<MouseAction> list) {
+        list.clear();
+        org.json.JSONArray arr = config.optJSONArray(key);
+        if (arr != null) {
+            for (int i = 0; i < arr.length(); i++) {
+                try { list.add(MouseAction.valueOf(arr.optString(i))); } catch (Exception e) {}
+            }
+        }
+    }
+
     public void loadConfiguration(JSONObject configuration) throws JSONException {
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) getLayoutParams();
 
@@ -599,6 +671,31 @@ public abstract class VirtualControllerElement extends View {
         layoutParams.height = configuration.getInt("HEIGHT");
         _isKeyboardMapping = configuration.optBoolean("IS_KBD", false);
         _mappedKeyCode = (short) configuration.optInt("KBD_CODE", 0);
+        
+        _extraKeyCodes.clear();
+        org.json.JSONArray extraKeys = configuration.optJSONArray("KBD_EXTRA");
+        if (extraKeys != null) {
+            for (int i = 0; i < extraKeys.length(); i++) {
+                _extraKeyCodes.add((short) extraKeys.optInt(i));
+            }
+        }
+        
+        _extraGamepadFlags.clear();
+        org.json.JSONArray extraGp = configuration.optJSONArray("GP_EXTRA");
+        if (extraGp != null) {
+            for (int i = 0; i < extraGp.length(); i++) {
+                _extraGamepadFlags.add(extraGp.optInt(i));
+            }
+        }
+
+        _extraMouseActions.clear();
+        org.json.JSONArray extraMs = configuration.optJSONArray("MOUSE_EXTRA");
+        if (extraMs != null) {
+            for (int i = 0; i < extraMs.length(); i++) {
+                try { _extraMouseActions.add(MouseAction.valueOf(extraMs.optString(i))); } catch (Exception e) {}
+            }
+        }
+
         _mappedKeyUp = (short) configuration.optInt("KBD_UP", 0);
         _mappedKeyDown = (short) configuration.optInt("KBD_DOWN", 0);
         _mappedKeyLeft = (short) configuration.optInt("KBD_LEFT", 0);
@@ -625,6 +722,7 @@ public abstract class VirtualControllerElement extends View {
         _customColor = configuration.optInt("COLOR", 0);
         _rotation = (float) configuration.optDouble("ROT", 0);
         _isToggleMode = configuration.optBoolean("TOGGLE", false);
+        _isTouchThrough = configuration.optBoolean("TOUCH_THROUGH", false);
         _isToggled = configuration.optBoolean("TOGGLED", false);
         
         if (configuration.has("TXT") && !configuration.isNull("TXT")) {

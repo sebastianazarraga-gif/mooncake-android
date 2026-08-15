@@ -119,16 +119,131 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="#FFFFFF" />
 
-                <Button
-                    android:id="@+id/setKeyboardButton"
+                <!-- Gamepad Bindings -->
+                <LinearLayout
+                    android:id="@+id/gpContainer"
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:text="Set Keyboard Key"
-                    android:textSize="12sp"
-                    android:backgroundTint="@color/deep_purple"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginBottom="8dp"
-                    android:visibility="gone" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Gamepad Binds" android:textColor="#BB86FC" android:textSize="11sp" android:textStyle="bold" android:layout_marginBottom="4dp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+                        <Button
+                            android:id="@+id/setGpButton"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:text="Button 1: None"
+                            android:textSize="12sp"
+                            android:backgroundTint="@color/deep_purple"
+                            android:textColor="#FFFFFF" />
+                        <ImageButton
+                            android:id="@+id/addGpButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/addpcbuttonrounded"
+                            android:backgroundTint="@color/purple_accent"
+                            android:src="@drawable/ic_add"
+                            android:scaleType="centerInside"
+                            android:padding="8dp"
+                            android:contentDescription="Add Gamepad" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/extraGpContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- Keyboard Bindings -->
+                <LinearLayout
+                    android:id="@+id/kbdContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Keyboard Binds" android:textColor="#BB86FC" android:textSize="11sp" android:textStyle="bold" android:layout_marginBottom="4dp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+                        <Button
+                            android:id="@+id/setKeyboardButton"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:text="Key 1: None"
+                            android:textSize="12sp"
+                            android:backgroundTint="@color/deep_purple"
+                            android:textColor="#FFFFFF" />
+                        <ImageButton
+                            android:id="@+id/addKbdButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/addpcbuttonrounded"
+                            android:backgroundTint="@color/purple_accent"
+                            android:src="@drawable/ic_add"
+                            android:scaleType="centerInside"
+                            android:padding="8dp"
+                            android:contentDescription="Add Keyboard" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/extraKbdContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- Mouse Bindings -->
+                <LinearLayout
+                    android:id="@+id/msContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mouse Binds" android:textColor="#BB86FC" android:textSize="11sp" android:textStyle="bold" android:layout_marginBottom="4dp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+                        <Button
+                            android:id="@+id/setMsButton"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:text="Action 1: None"
+                            android:textSize="12sp"
+                            android:backgroundTint="@color/deep_purple"
+                            android:textColor="#FFFFFF" />
+                        <ImageButton
+                            android:id="@+id/addMsButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/addpcbuttonrounded"
+                            android:backgroundTint="@color/purple_accent"
+                            android:src="@drawable/ic_add"
+                            android:scaleType="centerInside"
+                            android:padding="8dp"
+                            android:contentDescription="Add Mouse" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/extraMsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
 
                 <Button
                     android:id="@+id/setMouseButton"
@@ -157,6 +272,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Toggle Mode"
+                    android:textColor="#AAAAAA"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <CheckBox
+                    android:id="@+id/touchThroughCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Touch Through"
                     android:textColor="#AAAAAA"
                     android:layout_marginBottom="16dp"
                     android:visibility="gone" />

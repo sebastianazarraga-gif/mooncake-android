@@ -3,7 +3,7 @@
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/232a8tadrrn8jv0k/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-android/branch/master)
 [![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-android/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-android/)
 
-[Mooncake for Android](https://moonlight-stream.org) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
+[Mooncake for Android](https://github.com/sebastianazarraga-gif/Mooncake-android) is an open source client for NVIDIA GameStream and [Sunshine](https://github.com/LizardByte/Sunshine).
 
 Mooncake for Android will allow you to stream your full collection of games from your Windows PC to your Android device,
 whether in your own home or over the internet.
@@ -12,7 +12,7 @@ Mooncake dosent have a [PC client](https://github.com/moonlight-stream/moonlight
 
 
 ## Downloads
-* [APK](https://github.com/moonlight-stream/mooncake-android/releases)
+* [APK](https://github.com/sebastianazarraga-gif/mooncake-android/releases)
 
 ## Building
 * Install Android Studio and the Android NDK

@@ -33,13 +33,15 @@ import com.limelight.nvstream.input.ControllerPacket;
 public class ConfigureVirtualControllerActivity extends Activity {
 
     private VirtualController virtualController;
-    private View sidePanel, propertiesContainer;
+    private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer;
+    private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
+    private ImageButton addKbdButton, addGpButton, addMsButton;
     private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner;
     private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider;
     private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText;
     private LinearLayout directionalBindings;
-    private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setCustomTextButton, resetButton, saveButton;
-    private android.widget.CheckBox toggleModeCheckbox;
+    private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton;
+    private android.widget.CheckBox toggleModeCheckbox, touchThroughCheckbox;
     private boolean isUpdatingUI = false;
 
     private final String[] MODES = {"Gamepad", "Keyboard", "Mouse", "Combined"};
@@ -218,8 +220,24 @@ public class ConfigureVirtualControllerActivity extends Activity {
         bindLeft = findViewById(R.id.bindLeft);
         bindRight = findViewById(R.id.bindRight);
         setKeyboardButton = findViewById(R.id.setKeyboardButton);
+        setGpButton = findViewById(R.id.setGpButton);
+        setMsButton = findViewById(R.id.setMsButton);
+        
+        addKbdButton = findViewById(R.id.addKbdButton);
+        addGpButton = findViewById(R.id.addGpButton);
+        addMsButton = findViewById(R.id.addMsButton);
+        
+        kbdContainer = findViewById(R.id.kbdContainer);
+        gpContainer = findViewById(R.id.gpContainer);
+        msContainer = findViewById(R.id.msContainer);
+        
+        extraKbdContainer = findViewById(R.id.extraKbdContainer);
+        extraGpContainer = findViewById(R.id.extraGpContainer);
+        extraMsContainer = findViewById(R.id.extraMsContainer);
+        
         setCustomTextButton = findViewById(R.id.setCustomTextButton);
         toggleModeCheckbox = findViewById(R.id.toggleModeCheckbox);
+        touchThroughCheckbox = findViewById(R.id.touchThroughCheckbox);
 
         mappingModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, MODES));
         shapeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, SHAPES));
@@ -236,14 +254,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 selected.setMouseMapping(position == 2);
                 selected.setCombinedMapping(position == 3);
 
-                updatePropertiesVisibility(selected);
-                
-                if (position == 0) updateBindingSpinner(GAMEPAD_BUTTONS);
-                else if (position == 1) updateBindingSpinner(KEY_NAMES);
-                else if (position == 2) updateBindingSpinner(MOUSE_ACTIONS);
-                else if (position == 3) updateBindingSpinner(GAMEPAD_BUTTONS);
-                
-                syncBindingSpinnerSelection(selected);
+                updateSidePanel(selected);
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -251,21 +262,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         bindingSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (isUpdatingUI) return;
-                VirtualControllerElement selected = virtualController.getSelectedElement();
-                if (selected == null) return;
-                
-                int mode = mappingModeSpinner.getSelectedItemPosition();
-                if (mode == 0 || mode == 3) {
-                    selected.setGamepadFlag(GAMEPAD_FLAGS[position]);
-                    if (selected instanceof DigitalButton && position > 0) ((DigitalButton) selected).setText(GAMEPAD_BUTTONS[position]);
-                } else if (mode == 1) {
-                    selected.setMappedKeyCode(KEY_CODES[position]);
-                    if (selected instanceof DigitalButton && position > 0) ((DigitalButton) selected).setText(KEY_NAMES[position]);
-                } else if (mode == 2) {
-                    selected.setMouseAction(VirtualControllerElement.MouseAction.values()[position]);
-                    if (selected instanceof DigitalButton && position > 0) ((DigitalButton) selected).setText(MOUSE_ACTIONS[position]);
-                }
+                // redundant, using setButtons
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -394,6 +391,30 @@ public class ConfigureVirtualControllerActivity extends Activity {
             }
         });
 
+        addKbdButton.setOnClickListener(v -> {
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.getExtraKeyCodes().add((short)0);
+                updateSidePanel(selected);
+            }
+        });
+        
+        addGpButton.setOnClickListener(v -> {
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.getExtraGamepadFlags().add(0);
+                updateSidePanel(selected);
+            }
+        });
+        
+        addMsButton.setOnClickListener(v -> {
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.getExtraMouseActions().add(VirtualControllerElement.MouseAction.None);
+                updateSidePanel(selected);
+            }
+        });
+
         findViewById(R.id.deleteButton).setOnClickListener(v -> {
             VirtualControllerElement selected = virtualController.getSelectedElement();
             if (selected != null) {
@@ -424,22 +445,39 @@ public class ConfigureVirtualControllerActivity extends Activity {
         bindRight.setOnClickListener(v -> showDirectionMappingPicker(3));
         
         setKeyboardButton.setOnClickListener(v -> {
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected == null) return;
             new AlertDialog.Builder(this).setTitle("Select Key").setItems(KEY_NAMES, (dialog, which) -> {
-                VirtualControllerElement selected = virtualController.getSelectedElement();
-                if (selected != null) {
-                    selected.setMappedKeyCode(KEY_CODES[which]);
-                    updateSidePanel(selected);
-                }
+                selected.setMappedKeyCode(KEY_CODES[which]);
+                updateSidePanel(selected);
+            }).show();
+        });
+
+        setGpButton.setOnClickListener(v -> {
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected == null) return;
+            new AlertDialog.Builder(this).setTitle("Select Gamepad Button").setItems(GAMEPAD_BUTTONS, (dialog, which) -> {
+                selected.setGamepadFlag(GAMEPAD_FLAGS[which]);
+                updateSidePanel(selected);
+            }).show();
+        });
+
+        setMsButton.setOnClickListener(v -> {
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected == null) return;
+            new AlertDialog.Builder(this).setTitle("Select Mouse Action").setItems(MOUSE_ACTIONS, (dialog, which) -> {
+                selected.setMouseAction(VirtualControllerElement.MouseAction.values()[which]);
+                updateSidePanel(selected);
             }).show();
         });
 
         setCustomTextButton.setOnClickListener(v -> {
             VirtualControllerElement selected = virtualController.getSelectedElement();
             if (selected == null) return;
-            
+
             final android.widget.EditText input = new android.widget.EditText(this);
-            input.setText(""); 
-            
+            input.setText("");
+
             new AlertDialog.Builder(this)
                 .setTitle("Set Button Text")
                 .setView(input)
@@ -457,20 +495,35 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 selected.setToggleMode(isChecked);
             }
         });
+
+        touchThroughCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setTouchThrough(isChecked);
+            }
+        });
     }
 
     private void updatePropertiesVisibility(VirtualControllerElement selected) {
         boolean isStick = (selected instanceof AnalogStick) || (selected instanceof DigitalPad);
         boolean isCombo = selected.isCombinedMapping();
         boolean isKbd = selected.isKeyboardMapping();
-        
+
         directionalBindings.setVisibility(isStick ? View.VISIBLE : View.GONE);
+
+        int mode = selected.isCombinedMapping() ? 3 : (selected.isKeyboardMapping() ? 1 : (selected.isMouseMapping() ? 2 : 0));
+
+        gpContainer.setVisibility(!isStick && (mode == 0 || mode == 3) ? View.VISIBLE : View.GONE);
+        kbdContainer.setVisibility(!isStick && (mode == 1 || mode == 3) ? View.VISIBLE : View.GONE);
+        msContainer.setVisibility(!isStick && (mode == 2 || mode == 3) ? View.VISIBLE : View.GONE);
+
         toggleModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        touchThroughCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
         setCustomTextButton.setVisibility(!isStick ? View.VISIBLE : View.GONE);
-        setKeyboardButton.setVisibility(!isStick && (isKbd || isCombo) ? View.VISIBLE : View.GONE);
-        
-        bindingLabel.setVisibility(View.VISIBLE);
-        bindingSpinner.setVisibility(View.VISIBLE);
+
+        bindingLabel.setVisibility(View.GONE);
+        bindingSpinner.setVisibility(View.GONE);
         sensitivityLabel.setVisibility(isStick ? View.VISIBLE : View.GONE);
         findViewById(R.id.sensitivityContainer).setVisibility(isStick ? View.VISIBLE : View.GONE);
     }
@@ -498,27 +551,28 @@ public class ConfigureVirtualControllerActivity extends Activity {
 
         syncBindingSpinnerSelection(element);
         updatePropertiesVisibility(element);
-        
+
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) element.getLayoutParams();
         widthSlider.setProgress((lp.width - 50) / 5);
         heightSlider.setProgress((lp.height - 50) / 5);
         widthValueText.setText(String.valueOf(lp.width));
         heightValueText.setText(String.valueOf(lp.height));
-        
+
         opacitySlider.setProgress(element.getOpacity());
         opacityValueText.setText(element.getOpacity() + "%");
-        
+
         rotationSlider.setProgress((int) element.getRotation());
         rotationValueText.setText((int) element.getRotation() + "°");
-        
+
         // Map 0.1-5.0 range back to 0-100 progress
         float sense = element.getSensitivity();
         int progress = (int) (((sense - 0.1f) / 4.9f) * 100.0f);
         sensitivitySlider.setProgress(progress);
         sensitivityValueText.setText(String.format(java.util.Locale.US, "%.2f", sense));
-        
+
         shapeSpinner.setSelection(element.getShape().ordinal());
         toggleModeCheckbox.setChecked(element.isToggleMode());
+        touchThroughCheckbox.setChecked(element.isTouchThrough());
 
         int customColor = element.getCustomColor();
         int colorPos = 0;
@@ -530,14 +584,89 @@ public class ConfigureVirtualControllerActivity extends Activity {
         }
         colorSpinner.setSelection(colorPos);
 
+        extraGpContainer.removeAllViews();
+        extraKbdContainer.removeAllViews();
+        extraMsContainer.removeAllViews();
+        int mappingMode = mappingModeSpinner.getSelectedItemPosition();
         boolean isStick = (element instanceof AnalogStick) || (element instanceof DigitalPad);
+
+        if (!isStick) {
+            // Gamepad Section
+            if (mappingMode == 0 || mappingMode == 3) {
+                setGpButton.setText("Button 1: " + getGamepadButtonName(element.getGamepadFlag()));
+                java.util.List<Integer> extraGp = element.getExtraGamepadFlags();
+                for (int i = 0; i < extraGp.size(); i++) {
+                    final int index = i;
+                    View row = getLayoutInflater().inflate(R.layout.kbd_key_row, extraGpContainer, false);
+                    Button keyBtn = row.findViewById(R.id.setKeyboardButton);
+                    ImageButton delBtn = row.findViewById(R.id.delKbdButton);
+                    keyBtn.setText("Button " + (i + 2) + ": " + getGamepadButtonName(extraGp.get(i)));
+                    keyBtn.setOnClickListener(v -> {
+                        new AlertDialog.Builder(this).setTitle("Select Gamepad Button").setItems(GAMEPAD_BUTTONS, (dialog, which) -> {
+                            extraGp.set(index, GAMEPAD_FLAGS[which]);
+                            updateSidePanel(element);
+                        }).show();
+                    });
+                    delBtn.setOnClickListener(v -> { extraGp.remove(index); updateSidePanel(element); });
+                    extraGpContainer.addView(row);
+                }
+            }
+
+            // Keyboard Section
+            if (mappingMode == 1 || mappingMode == 3) {
+                setKeyboardButton.setText("Key 1: " + getKeyName(element.getMappedKeyCode()));
+                java.util.List<Short> extraKeys = element.getExtraKeyCodes();
+                for (int i = 0; i < extraKeys.size(); i++) {
+                    final int index = i;
+                    View row = getLayoutInflater().inflate(R.layout.kbd_key_row, extraKbdContainer, false);
+                    Button keyBtn = row.findViewById(R.id.setKeyboardButton);
+                    ImageButton delBtn = row.findViewById(R.id.delKbdButton);
+                    keyBtn.setText("Key " + (i + 2) + ": " + getKeyName(extraKeys.get(i)));
+                    keyBtn.setOnClickListener(v -> {
+                        new AlertDialog.Builder(this).setTitle("Select Key").setItems(KEY_NAMES, (dialog, which) -> {
+                            extraKeys.set(index, KEY_CODES[which]);
+                            updateSidePanel(element);
+                        }).show();
+                    });
+                    delBtn.setOnClickListener(v -> { extraKeys.remove(index); updateSidePanel(element); });
+                    extraKbdContainer.addView(row);
+                }
+            }
+
+            // Mouse Section
+            if (mappingMode == 2 || mappingMode == 3) {
+                setMsButton.setText("Action 1: " + element.getMouseAction().name());
+                java.util.List<VirtualControllerElement.MouseAction> extraMs = element.getExtraMouseActions();
+                for (int i = 0; i < extraMs.size(); i++) {
+                    final int index = i;
+                    View row = getLayoutInflater().inflate(R.layout.kbd_key_row, extraMsContainer, false);
+                    Button keyBtn = row.findViewById(R.id.setKeyboardButton);
+                    ImageButton delBtn = row.findViewById(R.id.delKbdButton);
+                    keyBtn.setText("Action " + (i + 2) + ": " + extraMs.get(index).name());
+                    keyBtn.setOnClickListener(v -> {
+                        new AlertDialog.Builder(this).setTitle("Select Mouse Action").setItems(MOUSE_ACTIONS, (dialog, which) -> {
+                            extraMs.set(index, VirtualControllerElement.MouseAction.values()[which]);
+                            updateSidePanel(element);
+                        }).show();
+                    });
+                    delBtn.setOnClickListener(v -> { extraMs.remove(index); updateSidePanel(element); });
+                    extraMsContainer.addView(row);
+                }
+            }
+        } else {
+            // Analog stick / Digital pad
+            updateDirButton(bindUp, "UP", element.getMappedKeyUp(), element.getMappedDirUpGamepadFlag(), element.getMappedDirUpMouseAction());
+            updateDirButton(bindDown, "DOWN", element.getMappedKeyDown(), element.getMappedDirDownGamepadFlag(), element.getMappedDirDownMouseAction());
+            updateDirButton(bindLeft, "LEFT", element.getMappedKeyLeft(), element.getMappedDirLeftGamepadFlag(), element.getMappedDirLeftMouseAction());
+            updateDirButton(bindRight, "RIGHT", element.getMappedKeyRight(), element.getMappedDirRightGamepadFlag(), element.getMappedDirRightMouseAction());
+        }
+
+        boolean isStickVar = (element instanceof AnalogStick) || (element instanceof DigitalPad);
         if (isStick) {
             updateDirButton(bindUp, "UP", element.getMappedKeyUp(), element.getMappedDirUpGamepadFlag(), element.getMappedDirUpMouseAction());
             updateDirButton(bindDown, "DOWN", element.getMappedKeyDown(), element.getMappedDirDownGamepadFlag(), element.getMappedDirDownMouseAction());
             updateDirButton(bindLeft, "LEFT", element.getMappedKeyLeft(), element.getMappedDirLeftGamepadFlag(), element.getMappedDirLeftMouseAction());
             updateDirButton(bindRight, "RIGHT", element.getMappedKeyRight(), element.getMappedDirRightGamepadFlag(), element.getMappedDirRightMouseAction());
-        } else {
-            setKeyboardButton.setText("Kbd Key: " + getKeyName(element.getMappedKeyCode()));
         }
         isUpdatingUI = false;
     }
