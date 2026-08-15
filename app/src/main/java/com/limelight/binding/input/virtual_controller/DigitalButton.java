@@ -27,24 +27,9 @@ import java.util.List;
  */
 public class DigitalButton extends VirtualControllerElement {
 
-    /**
-     * Listener interface to update registered observers.
-     */
     public interface DigitalButtonListener {
-
-        /**
-         * onClick event will be fired on button click.
-         */
         void onClick();
-
-        /**
-         * onLongClick event will be fired on button long click.
-         */
         void onLongClick();
-
-        /**
-         * onRelease event will be fired on button unpress.
-         */
         void onRelease();
     }
 
@@ -53,6 +38,7 @@ public class DigitalButton extends VirtualControllerElement {
     private int icon = -1;
     private long timerLongClickTimeout = 3000;
     private boolean lastReportedState = false;
+
     private final Runnable longClickRunnable = new Runnable() {
         @Override
         public void run() {
@@ -60,9 +46,162 @@ public class DigitalButton extends VirtualControllerElement {
         }
     };
 
+    private final Runnable autoRepeatReleaseRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (_isOrderingMode) return;
+            applyBindingState(false);
+            if ((_isToggled || isPressed()) && _isRepeatMode) {
+                virtualController.getHandler().postDelayed(autoRepeatRunnable, _repeatInterval);
+            }
+        }
+    };
+
+    private final Runnable autoRepeatRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (_isOrderingMode) return;
+            if ((_isToggled || isPressed()) && _isRepeatMode) {
+                applyBindingState(true);
+                virtualController.getHandler().removeCallbacks(autoRepeatReleaseRunnable);
+                virtualController.getHandler().postDelayed(autoRepeatReleaseRunnable, _activationTime);
+            }
+        }
+    };
+
+    // --- AUTOMATION ENGINE ---
+    private enum AutoState { IDLE, PRESSING, GAPPING, LOOP_WAIT }
+    private AutoState currentAutoState = AutoState.IDLE;
+    private int currentActionIdx = 0;
+    private List<BindingAction> actionSequence = null;
+
+    private final Runnable automationRunner = new Runnable() {
+        @Override
+        public void run() {
+            if (!_isOrderingMode || currentAutoState == AutoState.IDLE) {
+                return;
+            }
+
+            // Lazy init sequence
+            if (actionSequence == null || actionSequence.isEmpty()) {
+                actionSequence = getAllActions();
+                if (actionSequence.isEmpty()) {
+                    stopAutomation();
+                    return;
+                }
+            }
+
+            long nextDelay = 10;
+            boolean buttonActive = isPressed() || _isToggled;
+
+            switch (currentAutoState) {
+                case PRESSING:
+                    // Stop if "Apply on hold" is ON and user let go
+                    if (_applyOnHold && !buttonActive) {
+                        stopAutomation();
+                        return;
+                    }
+
+                    // Press current key
+                    if (currentActionIdx >= actionSequence.size()) currentActionIdx = 0;
+                    executeAction(actionSequence.get(currentActionIdx), true);
+                    
+                    // Transition to Release/Gap phase
+                    currentAutoState = AutoState.GAPPING;
+                    nextDelay = (_applyOnHold && _isHoldRepeat) ? _holdActivationTime : _orderActivationTime;
+                    break;
+
+                case GAPPING:
+                    // Release the key we just pressed
+                    if (currentActionIdx < actionSequence.size()) {
+                        executeAction(actionSequence.get(currentActionIdx), false);
+                    }
+                    
+                    currentActionIdx++;
+                    
+                    // Check if we finished the full list
+                    if (currentActionIdx >= actionSequence.size()) {
+                        currentActionIdx = 0; // Reset index for next cycle
+                        
+                        // Decide if we loop
+                        boolean shouldLoop = (_isRepeatMode && !_applyOnHold) || (_applyOnHold && _isHoldRepeat && buttonActive);
+                        
+                        if (shouldLoop) {
+                            currentAutoState = AutoState.LOOP_WAIT;
+                            nextDelay = (_applyOnHold && _isHoldRepeat) ? _holdRepeatDelay : _orderGapTime;
+                        } else {
+                            // Run once completed
+                            currentAutoState = AutoState.IDLE;
+                            return;
+                        }
+                    } else {
+                        // Not the end, wait gap and move to next PRESSING state
+                        currentAutoState = AutoState.PRESSING;
+                        nextDelay = (_applyOnHold && _isHoldRepeat) ? _holdRepeatDelay : _orderGapTime;
+                    }
+                    break;
+
+                case LOOP_WAIT:
+                    // Loop delay finished, start pressing the first item again
+                    currentAutoState = AutoState.PRESSING;
+                    nextDelay = 10; // Trigger immediately
+                    break;
+            }
+
+            // Final safety check: if we are supposed to be IDLE, stop everything and exit
+            if (!_isOrderingMode || currentAutoState == AutoState.IDLE) {
+                stopAutomation();
+                return;
+            }
+
+            // Schedule next step
+            virtualController.getHandler().postDelayed(this, Math.max(1, nextDelay));
+        }
+    };
+
+    private static class BindingAction {
+        enum Type { KBD, GP, MS }
+        Type type;
+        Object value;
+        BindingAction(Type t, Object v) { type = t; value = v; }
+    }
+
+    private List<BindingAction> getAllActions() {
+        List<BindingAction> actions = new ArrayList<>();
+        if (isCombinedMapping() || (!isKeyboardMapping() && !isMouseMapping())) {
+            if (_gamepadFlag != 0) actions.add(new BindingAction(BindingAction.Type.GP, _gamepadFlag));
+            for (Integer i : _extraGamepadFlags) if (i != 0) actions.add(new BindingAction(BindingAction.Type.GP, i));
+        }
+        if (isCombinedMapping() || isKeyboardMapping()) {
+            if (_mappedKeyCode != 0) actions.add(new BindingAction(BindingAction.Type.KBD, _mappedKeyCode));
+            for (Short s : _extraKeyCodes) if (s != 0) actions.add(new BindingAction(BindingAction.Type.KBD, s));
+        }
+        if (isCombinedMapping() || isMouseMapping()) {
+            if (_mouseAction != MouseAction.None) actions.add(new BindingAction(BindingAction.Type.MS, _mouseAction));
+            for (MouseAction m : _extraMouseActions) if (m != MouseAction.None) actions.add(new BindingAction(BindingAction.Type.MS, m));
+        }
+        return actions;
+    }
+
+    private void executeAction(BindingAction action, boolean active) {
+        ControllerHandler ch = virtualController.getControllerHandler();
+        if (ch == null) return;
+        switch (action.type) {
+            case KBD: ch.reportVirtualKeyboardInput((Short)action.value, active); break;
+            case GP: applyGpFlagInternal(ch, (Integer)action.value, active); break;
+            case MS: applyMouseAction(ch, (MouseAction)action.value, active); break;
+        }
+    }
+
+    private void applyGpFlagInternal(ControllerHandler ch, int flag, boolean active) {
+        VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
+        if (active) inputContext.inputMap |= flag;
+        else inputContext.inputMap &= ~flag;
+        virtualController.sendControllerInputContext();
+    }
+
     private final Paint paint = new Paint();
     private final RectF rect = new RectF();
-
     private int layer;
     private DigitalButton movingButton = null;
 
@@ -73,7 +212,6 @@ public class DigitalButton extends VirtualControllerElement {
                 ControllerHandler ch = virtualController.getControllerHandler();
                 if (ch != null) {
                     float totalSense = _sensitivity * _globalSensitivity;
-                    
                     if (_mouseAction == MouseAction.MoveUp) ch.reportVirtualMouseMove((short)0, (short)(-20 * totalSense));
                     else if (_mouseAction == MouseAction.MoveDown) ch.reportVirtualMouseMove((short)0, (short)(20 * totalSense));
                     else if (_mouseAction == MouseAction.MoveLeft) ch.reportVirtualMouseMove((short)(-20 * totalSense), (short)0);
@@ -86,122 +224,35 @@ public class DigitalButton extends VirtualControllerElement {
         }
     };
 
-    boolean inRange(float x, float y) {
-        return (this.getX() < x && this.getX() + this.getWidth() > x) &&
-                (this.getY() < y && this.getY() + this.getHeight() > y);
-    }
-
-    public boolean checkMovement(float x, float y, DigitalButton movingButton) {
-        // check if the movement happened in the same layer
-        if (movingButton.layer != this.layer) {
-            return false;
-        }
-
-        // save current pressed state
-        boolean wasPressed = isPressed();
-
-        // check if the movement directly happened on the button
-        if ((this.movingButton == null || movingButton == this.movingButton)
-                && this.inRange(x, y)) {
-            // set button pressed state depending on moving button pressed state
-            if (this.isPressed() != movingButton.isPressed()) {
-                this.setPressed(movingButton.isPressed());
-            }
-        }
-        // check if the movement is outside of the range and the movement button
-        // is the saved moving button
-        else if (movingButton == this.movingButton) {
-            this.setPressed(false);
-        }
-
-        // check if a change occurred
-        if (wasPressed != isPressed()) {
-            if (isPressed()) {
-                // is pressed set moving button and emit click event
-                this.movingButton = movingButton;
-                onClickCallback();
-            } else {
-                // no longer pressed reset moving button and emit release event
-                this.movingButton = null;
-                onReleaseCallback();
-            }
-
-            invalidate();
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private void checkMovementForAllButtons(float x, float y) {
-        for (VirtualControllerElement element : virtualController.getElements()) {
-            if (element != this && element instanceof DigitalButton) {
-                ((DigitalButton) element).checkMovement(x, y, this);
-            }
-        }
-    }
-
     public DigitalButton(VirtualController controller, int elementId, int layer, Context context) {
         super(controller, context, elementId);
         this.layer = layer;
     }
 
-    public void addDigitalButtonListener(DigitalButtonListener listener) {
-        listeners.add(listener);
-    }
-
-    public void setText(String text) {
-        this.text = text;
-        invalidate();
-    }
-
-    public void setIcon(int id) {
-        this.icon = id;
-        invalidate();
-    }
+    public void addDigitalButtonListener(DigitalButtonListener listener) { listeners.add(listener); }
+    public void setText(String text) { this.text = text; invalidate(); }
+    public void setIcon(int id) { this.icon = id; invalidate(); }
 
     @Override
     protected void onElementDraw(Canvas canvas) {
-        // set transparent background
         canvas.drawColor(Color.TRANSPARENT);
-
         paint.setTextSize(getPercent(getWidth(), 25));
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setStrokeWidth(getDefaultStrokeWidth());
-
         int color = (isPressed() || _isToggled) ? getPressedColor() : getDefaultColor();
-        
-        // Draw fill
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(color & 0x40FFFFFF); // 25% opacity fill
-        
+        paint.setColor(color & 0x40FFFFFF);
         rect.left = rect.top = paint.getStrokeWidth();
         rect.right = getWidth() - rect.left;
         rect.bottom = getHeight() - rect.top;
-
-        if (shape == Shape.Square) {
-            canvas.drawRect(rect, paint);
-        } else if (shape == Shape.SquareRounded) {
-            float radius = getPercent(getCorrectWidth(), 15);
-            canvas.drawRoundRect(rect, radius, radius, paint);
-        } else {
-            canvas.drawOval(rect, paint);
-        }
-
-        // Draw stroke
+        if (shape == Shape.Square) canvas.drawRect(rect, paint);
+        else if (shape == Shape.SquareRounded) { float radius = getPercent(getCorrectWidth(), 15); canvas.drawRoundRect(rect, radius, radius, paint); }
+        else canvas.drawOval(rect, paint);
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(color);
-        
-        if (shape == Shape.Square) {
-            canvas.drawRect(rect, paint);
-        } else if (shape == Shape.SquareRounded) {
-            float radius = getPercent(getCorrectWidth(), 15);
-            canvas.drawRoundRect(rect, radius, radius, paint);
-        } else {
-            canvas.drawOval(rect, paint);
-        }
-
+        if (shape == Shape.Square) canvas.drawRect(rect, paint);
+        else if (shape == Shape.SquareRounded) { float radius = getPercent(getCorrectWidth(), 15); canvas.drawRoundRect(rect, radius, radius, paint); }
+        else canvas.drawOval(rect, paint);
         if (icon != -1) {
             Drawable d = getResources().getDrawable(icon);
             d.setBounds(5, 5, getWidth() - 5, getHeight() - 5);
@@ -215,28 +266,51 @@ public class DigitalButton extends VirtualControllerElement {
     }
 
     private void onClickCallback() {
-        _DBG("clicked");
-        
+        if (_isOrderingMode) {
+            if (currentAutoState == AutoState.IDLE) {
+                currentAutoState = AutoState.PRESSING;
+                currentActionIdx = 0;
+                actionSequence = null;
+                virtualController.getHandler().removeCallbacks(automationRunner);
+                virtualController.getHandler().post(automationRunner);
+            }
+            if (!_isToggleMode) { invalidate(); return; }
+        }
+
         if (_isToggleMode) {
             _isToggled = !_isToggled;
-            applyBindingState(_isToggled);
-            
-            if (_isToggled && (isMouseMapping() || isCombinedMapping())) {
-                if (_mouseAction == MouseAction.MoveUp || _mouseAction == MouseAction.MoveDown ||
-                    _mouseAction == MouseAction.MoveLeft || _mouseAction == MouseAction.MoveRight ||
-                    _mouseAction == MouseAction.ScrollUp || _mouseAction == MouseAction.ScrollDown) {
-                    virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
-                    virtualController.getHandler().post(mouseRepeatRunnable);
+            if (!_isToggled) stopAutomation();
+            else {
+                if (_isOrderingMode) {
+                    if (currentAutoState == AutoState.IDLE) {
+                        currentAutoState = AutoState.PRESSING;
+                        currentActionIdx = 0;
+                        actionSequence = null;
+                        virtualController.getHandler().removeCallbacks(automationRunner);
+                        virtualController.getHandler().post(automationRunner);
+                    }
+                } else if (_isRepeatMode) {
+                    virtualController.getHandler().removeCallbacks(autoRepeatRunnable);
+                    virtualController.getHandler().post(autoRepeatRunnable);
+                } else applyBindingState(true);
+                
+                if (isMouseMapping() || isCombinedMapping()) {
+                    if (_mouseAction == MouseAction.MoveUp || _mouseAction == MouseAction.MoveDown ||
+                        _mouseAction == MouseAction.MoveLeft || _mouseAction == MouseAction.MoveRight ||
+                        _mouseAction == MouseAction.ScrollUp || _mouseAction == MouseAction.ScrollDown) {
+                        virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+                        virtualController.getHandler().post(mouseRepeatRunnable);
+                    }
                 }
-            } else if (!_isToggled) {
-                virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
             }
-            
             invalidate();
             return;
         }
 
-        applyBindingState(true);
+        if (_isRepeatMode) {
+            virtualController.getHandler().removeCallbacks(autoRepeatRunnable);
+            virtualController.getHandler().post(autoRepeatRunnable);
+        } else applyBindingState(true);
 
         if (isMouseMapping() || isCombinedMapping()) {
             if (_mouseAction == MouseAction.MoveUp || _mouseAction == MouseAction.MoveDown ||
@@ -246,80 +320,41 @@ public class DigitalButton extends VirtualControllerElement {
                 virtualController.getHandler().post(mouseRepeatRunnable);
             }
         }
-        
         virtualController.getHandler().removeCallbacks(longClickRunnable);
         virtualController.getHandler().postDelayed(longClickRunnable, timerLongClickTimeout);
     }
 
     private void applyBindingState(boolean active) {
         if (lastReportedState == active) return;
+        if (_isOrderingMode && active) return;
         lastReportedState = active;
-        
         ControllerHandler ch = virtualController.getControllerHandler();
         if (ch == null) return;
-
         if (isKeyboardMapping() || isCombinedMapping()) {
             if (active) {
                 if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, true);
-                for (Short code : _extraKeyCodes) {
-                    if (code != 0) ch.reportVirtualKeyboardInput(code, true);
-                }
+                for (Short code : _extraKeyCodes) if (code != 0) ch.reportVirtualKeyboardInput(code, true);
             } else {
-                // Release in reverse order
-                for (int i = _extraKeyCodes.size() - 1; i >= 0; i--) {
-                    short code = _extraKeyCodes.get(i);
-                    if (code != 0) ch.reportVirtualKeyboardInput(code, false);
-                }
+                for (int i = _extraKeyCodes.size() - 1; i >= 0; i--) { short code = _extraKeyCodes.get(i); if (code != 0) ch.reportVirtualKeyboardInput(code, false); }
                 if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false);
             }
         }
-        
         if (isMouseMapping() || isCombinedMapping()) {
             if (active) {
                 applyMouseAction(ch, _mouseAction, true);
-                for (MouseAction action : _extraMouseActions) {
-                    applyMouseAction(ch, action, true);
-                }
+                for (MouseAction action : _extraMouseActions) applyMouseAction(ch, action, true);
             } else {
-                for (int i = _extraMouseActions.size() - 1; i >= 0; i--) {
-                    applyMouseAction(ch, _extraMouseActions.get(i), false);
-                }
+                for (int i = _extraMouseActions.size() - 1; i >= 0; i--) applyMouseAction(ch, _extraMouseActions.get(i), false);
                 applyMouseAction(ch, _mouseAction, false);
             }
         }
-        
         if (!isKeyboardMapping() && !isMouseMapping() || isCombinedMapping()) {
-            // Main gamepad flag
-            if (_gamepadFlag != 0) {
-                applyGpFlag(ch, _gamepadFlag, active);
-            }
-            // Extra gamepad flags
-            for (Integer flag : _extraGamepadFlags) {
-                if (flag != 0) applyGpFlag(ch, flag, active);
-            }
-            
-            if (_gamepadFlag == 0 && _extraGamepadFlags.isEmpty()) {
-                onDefaultGamepadAction(active);
-            }
-            
-            // notify listeners
-            if (active) {
-                for (DigitalButtonListener listener : listeners) {
-                    listener.onClick();
-                }
-            } else {
-                for (DigitalButtonListener listener : listeners) {
-                    listener.onRelease();
-                }
-            }
+            if (_gamepadFlag != 0) applyGpFlagInternal(ch, _gamepadFlag, active);
+            for (Integer flag : _extraGamepadFlags) if (flag != 0) applyGpFlagInternal(ch, flag, active);
+            if (_gamepadFlag == 0 && _extraGamepadFlags.isEmpty()) onDefaultGamepadAction(active);
+            if (active) { for (DigitalButtonListener listener : listeners) listener.onClick(); }
+            else { for (DigitalButtonListener listener : listeners) listener.onRelease(); }
         }
-    }
-
-    private void applyGpFlag(ControllerHandler ch, int flag, boolean active) {
-        VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
-        if (active) inputContext.inputMap |= flag;
-        else inputContext.inputMap &= ~flag;
-        virtualController.sendControllerInputContext();
     }
 
     private void applyMouseAction(ControllerHandler ch, MouseAction action, boolean active) {
@@ -328,76 +363,81 @@ public class DigitalButton extends VirtualControllerElement {
         else if (action == MouseAction.MiddleClick) ch.reportVirtualMouseButton(MouseButtonPacket.BUTTON_MIDDLE, active);
     }
 
-    protected void onDefaultGamepadAction(boolean active) {
-        // To be overridden by specialized buttons like triggers
-    }
-
-    private void onLongClickCallback() {
-        _DBG("long click");
-
-        if (!isKeyboardMapping()) {
-            // notify listeners
-            for (DigitalButtonListener listener : listeners) {
-                listener.onLongClick();
-            }
-        }
-    }
+    protected void onDefaultGamepadAction(boolean active) {}
+    private void onLongClickCallback() { if (!isKeyboardMapping()) { for (DigitalButtonListener listener : listeners) listener.onLongClick(); } }
 
     private void onReleaseCallback() {
         _DBG("released");
         
+        if (_isOrderingMode && !_isToggled) {
+            if (_applyOnHold) {
+                stopAutomation();
+            }
+            return; 
+        }
+
         if (_isToggleMode) return;
 
         applyBindingState(false);
-
-        virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+        stopAutomation();
 
         // We may be called for a release without a prior click
         virtualController.getHandler().removeCallbacks(longClickRunnable);
     }
 
+    private void stopAutomation() {
+        virtualController.getHandler().removeCallbacks(autoRepeatRunnable);
+        virtualController.getHandler().removeCallbacks(autoRepeatReleaseRunnable);
+        virtualController.getHandler().removeCallbacks(automationRunner);
+        virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
+        currentAutoState = AutoState.IDLE;
+        currentActionIdx = 0;
+        actionSequence = null;
+        lastReportedState = false;
+        ControllerHandler ch = virtualController.getControllerHandler();
+        if (ch != null) {
+            VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
+            List<BindingAction> allActions = getAllActions();
+            for (BindingAction action : allActions) {
+                if (action.type == BindingAction.Type.KBD) ch.reportVirtualKeyboardInput((Short)action.value, false);
+                else if (action.type == BindingAction.Type.GP) inputContext.inputMap &= ~(Integer)action.value;
+                else if (action.type == BindingAction.Type.MS) applyMouseAction(ch, (MouseAction)action.value, false);
+            }
+            if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false);
+            for (Short code : _extraKeyCodes) if (code != 0) ch.reportVirtualKeyboardInput(code, false);
+            applyMouseAction(ch, _mouseAction, false);
+            for (MouseAction action : _extraMouseActions) applyMouseAction(ch, action, false);
+            inputContext.inputMap &= ~_gamepadFlag;
+            for (Integer flag : _extraGamepadFlags) if (flag != 0) inputContext.inputMap &= ~flag;
+            if (_gamepadFlag == 0 && _extraGamepadFlags.isEmpty()) onDefaultGamepadAction(false);
+            virtualController.sendControllerInputContext();
+        }
+    }
+
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        if (_isTouchThrough) {
-            dispatchToBackground(event);
-        }
-        
-        // get masked (not specific to a pointer) action
+        if (_isTouchThrough) dispatchToBackground(event);
         float x = getX() + event.getX();
         float y = getY() + event.getY();
-        int action = event.getActionMasked();
-
-        switch (action) {
-            case MotionEvent.ACTION_DOWN: {
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
                 updateGlobalSensitivity();
                 movingButton = null;
                 setPressed(true);
                 onClickCallback();
-
                 checkMovementForAllButtons(x, y);
-
                 invalidate();
-
                 return true;
-            }
-            case MotionEvent.ACTION_MOVE: {
+            case MotionEvent.ACTION_MOVE:
                 checkMovementForAllButtons(x, y);
-
                 return true;
-            }
             case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP: {
+            case MotionEvent.ACTION_UP:
                 setPressed(false);
                 onReleaseCallback();
-
                 checkMovementForAllButtons(x, y);
-
                 invalidate();
-
                 return true;
-            }
-            default: {
-            }
         }
         return true;
     }
@@ -414,23 +454,41 @@ public class DigitalButton extends VirtualControllerElement {
                     clone.recycle();
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    @Override
+    public JSONObject getConfiguration() throws JSONException { JSONObject config = super.getConfiguration(); config.put("TEXT", text); return config; }
+    @Override
+    public void loadConfiguration(JSONObject configuration) throws JSONException { super.loadConfiguration(configuration); if (configuration.has("TEXT")) this.text = configuration.getString("TEXT"); }
+
+    boolean inRange(float x, float y) {
+        return (this.getX() < x && this.getX() + this.getWidth() > x) &&
+                (this.getY() < y && this.getY() + this.getHeight() > y);
+    }
+
+    public boolean checkMovement(float x, float y, DigitalButton movingButton) {
+        if (movingButton.layer != this.layer) return false;
+        boolean wasPressed = isPressed();
+        if ((this.movingButton == null || movingButton == this.movingButton) && this.inRange(x, y)) {
+            if (this.isPressed() != movingButton.isPressed()) this.setPressed(movingButton.isPressed());
+        } else if (movingButton == this.movingButton) {
+            this.setPressed(false);
         }
+        if (wasPressed != isPressed()) {
+            if (isPressed()) { this.movingButton = movingButton; onClickCallback(); }
+            else { this.movingButton = null; onReleaseCallback(); }
+            invalidate();
+            return true;
+        }
+        return false;
     }
 
-    @Override
-    public JSONObject getConfiguration() throws JSONException {
-        JSONObject config = super.getConfiguration();
-        config.put("TEXT", text);
-        return config;
-    }
-
-    @Override
-    public void loadConfiguration(JSONObject configuration) throws JSONException {
-        super.loadConfiguration(configuration);
-        if (configuration.has("TEXT")) {
-            this.text = configuration.getString("TEXT");
+    private void checkMovementForAllButtons(float x, float y) {
+        for (VirtualControllerElement element : virtualController.getElements()) {
+            if (element != this && element instanceof DigitalButton) {
+                ((DigitalButton) element).checkMovement(x, y, this);
+            }
         }
     }
 }

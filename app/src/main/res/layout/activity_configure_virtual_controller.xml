@@ -119,6 +119,166 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="#FFFFFF" />
 
+                <!-- Ordering Section -->
+                <LinearLayout
+                    android:id="@+id/orderingContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <CheckBox
+                        android:id="@+id/orderingCheckbox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Ordering"
+                        android:textColor="#AAAAAA" />
+
+                    <CheckBox
+                        android:id="@+id/applyOnHoldCheckbox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Apply on hold"
+                        android:textColor="#AAAAAA"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/holdRepeatContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:layout_marginStart="16dp">
+
+                        <CheckBox
+                            android:id="@+id/holdRepeatCheckbox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Repeat"
+                            android:textColor="#AAAAAA" />
+
+                        <LinearLayout
+                            android:id="@+id/holdRepeatSettings"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Repeat Delay" android:textColor="#BB86FC" android:textSize="10sp"/>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="8dp">
+                                <EditText
+                                    android:id="@+id/holdRepeatDelayEdit"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:backgroundTint="#FFFFFF"
+                                    android:textColor="#FFFFFF"
+                                    android:inputType="number"
+                                    android:hint="1000"
+                                    android:textSize="12sp" />
+                                <Spinner
+                                    android:id="@+id/holdRepeatDelayUnit"
+                                    android:layout_width="80dp"
+                                    android:layout_height="44dp"
+                                    android:layout_marginStart="8dp"
+                                    android:backgroundTint="#FFFFFF"
+                                    android:entries="@array/time_units" />
+                            </LinearLayout>
+
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Activation Time" android:textColor="#BB86FC" android:textSize="10sp"/>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+                                <EditText
+                                    android:id="@+id/holdActivationEdit"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:backgroundTint="#FFFFFF"
+                                    android:textColor="#FFFFFF"
+                                    android:inputType="number"
+                                    android:hint="100"
+                                    android:textSize="12sp" />
+                                <Spinner
+                                    android:id="@+id/holdActivationUnit"
+                                    android:layout_width="80dp"
+                                    android:layout_height="44dp"
+                                    android:layout_marginStart="8dp"
+                                    android:backgroundTint="#FFFFFF"
+                                    android:entries="@array/time_units" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/orderSettingsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:layout_marginTop="4dp">
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Order Activation Time" android:textColor="#BB86FC" android:textSize="10sp"/>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+                            <EditText
+                                android:id="@+id/orderActivationEdit"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_weight="1"
+                                android:backgroundTint="#FFFFFF"
+                                android:textColor="#FFFFFF"
+                                android:inputType="number"
+                                android:hint="100"
+                                android:textSize="12sp" />
+                            <Spinner
+                                android:id="@+id/orderActivationUnitSpinner"
+                                android:layout_width="80dp"
+                                android:layout_height="44dp"
+                                android:layout_marginStart="8dp"
+                                android:backgroundTint="#FFFFFF"
+                                android:entries="@array/time_units" />
+                        </LinearLayout>
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Order Gap Time" android:textColor="#BB86FC" android:textSize="10sp"/>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+                            <EditText
+                                android:id="@+id/orderGapEdit"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_weight="1"
+                                android:backgroundTint="#FFFFFF"
+                                android:textColor="#FFFFFF"
+                                android:inputType="number"
+                                android:hint="100"
+                                android:textSize="12sp" />
+                            <Spinner
+                                android:id="@+id/orderGapUnitSpinner"
+                                android:layout_width="80dp"
+                                android:layout_height="44dp"
+                                android:layout_marginStart="8dp"
+                                android:backgroundTint="#FFFFFF"
+                                android:entries="@array/time_units" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
                 <!-- Gamepad Bindings -->
                 <LinearLayout
                     android:id="@+id/gpContainer"
@@ -282,8 +442,71 @@
                     android:layout_height="wrap_content"
                     android:text="Touch Through"
                     android:textColor="#AAAAAA"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginBottom="8dp"
                     android:visibility="gone" />
+
+                <CheckBox
+                    android:id="@+id/repeatModeCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/repeating"
+                    android:textColor="#AAAAAA"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/repeatContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+                    <EditText
+                        android:id="@+id/repeatIntervalEdit"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="#FFFFFF"
+                        android:textColor="#FFFFFF"
+                        android:inputType="number"
+                        android:hint="1000"
+                        android:textSize="14sp" />
+                    <Spinner
+                        android:id="@+id/repeatUnitSpinner"
+                        android:layout_width="80dp"
+                        android:layout_height="44dp"
+                        android:layout_marginStart="8dp"
+                        android:backgroundTint="#FFFFFF"
+                        android:entries="@array/time_units" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/activationContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+                    <EditText
+                        android:id="@+id/activationTimeEdit"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="#FFFFFF"
+                        android:textColor="#FFFFFF"
+                        android:inputType="number"
+                        android:hint="Activation Time"
+                        android:textSize="14sp" />
+                    <Spinner
+                        android:id="@+id/activationUnitSpinner"
+                        android:layout_width="80dp"
+                        android:layout_height="44dp"
+                        android:layout_marginStart="8dp"
+                        android:backgroundTint="#FFFFFF"
+                        android:entries="@array/time_units" />
+                </LinearLayout>
 
                 <!-- Directional Bindings in D-Pad Layout -->
                 <LinearLayout

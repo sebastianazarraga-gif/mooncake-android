@@ -106,6 +106,16 @@ public abstract class VirtualControllerElement extends View {
     protected boolean _isToggleMode = false;
     protected boolean _isTouchThrough = false;
     protected boolean _isToggled = false;
+    protected boolean _isRepeatMode = false;
+    protected long _repeatInterval = 1000;
+    protected long _activationTime = 100;
+    protected boolean _isOrderingMode = false;
+    protected long _orderActivationTime = 100;
+    protected long _orderGapTime = 100;
+    protected boolean _applyOnHold = false;
+    protected boolean _isHoldRepeat = false;
+    protected long _holdRepeatDelay = 1000;
+    protected long _holdActivationTime = 100;
     protected String _customText = null;
 
     float position_pressed_x = 0;
@@ -546,6 +556,86 @@ public abstract class VirtualControllerElement extends View {
         return _isToggleMode;
     }
 
+    public void setRepeatMode(boolean repeatMode) {
+        _isRepeatMode = repeatMode;
+    }
+
+    public boolean isRepeatMode() {
+        return _isRepeatMode;
+    }
+
+    public void setRepeatInterval(long interval) {
+        _repeatInterval = interval;
+    }
+
+    public long getRepeatInterval() {
+        return _repeatInterval;
+    }
+
+    public void setActivationTime(long time) {
+        _activationTime = time;
+    }
+
+    public long getActivationTime() {
+        return _activationTime;
+    }
+
+    public void setOrderingMode(boolean ordering) {
+        _isOrderingMode = ordering;
+    }
+
+    public boolean isOrderingMode() {
+        return _isOrderingMode;
+    }
+
+    public void setOrderActivationTime(long time) {
+        _orderActivationTime = time;
+    }
+
+    public long getOrderActivationTime() {
+        return _orderActivationTime;
+    }
+
+    public void setOrderGapTime(long time) {
+        _orderGapTime = time;
+    }
+
+    public long getOrderGapTime() {
+        return _orderGapTime;
+    }
+
+    public void setApplyOnHold(boolean hold) {
+        _applyOnHold = hold;
+    }
+
+    public boolean isApplyOnHold() {
+        return _applyOnHold;
+    }
+
+    public void setHoldRepeat(boolean repeat) {
+        _isHoldRepeat = repeat;
+    }
+
+    public boolean isHoldRepeat() {
+        return _isHoldRepeat;
+    }
+
+    public void setHoldRepeatDelay(long delay) {
+        _holdRepeatDelay = delay;
+    }
+
+    public long getHoldRepeatDelay() {
+        return _holdRepeatDelay;
+    }
+
+    public void setHoldActivationTime(long time) {
+        _holdActivationTime = time;
+    }
+
+    public long getHoldActivationTime() {
+        return _holdActivationTime;
+    }
+
     public void setTouchThrough(boolean touchThrough) {
         _isTouchThrough = touchThrough;
     }
@@ -616,6 +706,16 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("ROT", _rotation);
         configuration.put("TOGGLE", _isToggleMode);
         configuration.put("TOUCH_THROUGH", _isTouchThrough);
+        configuration.put("REPEAT", _isRepeatMode);
+        configuration.put("INTERVAL", _repeatInterval);
+        configuration.put("ACTIVE_TIME", _activationTime);
+        configuration.put("ORDERING", _isOrderingMode);
+        configuration.put("ORD_ACT", _orderActivationTime);
+        configuration.put("ORD_GAP", _orderGapTime);
+        configuration.put("ORD_HOLD", _applyOnHold);
+        configuration.put("HOLD_REP", _isHoldRepeat);
+        configuration.put("HOLD_DLY", _holdRepeatDelay);
+        configuration.put("HOLD_ACT", _holdActivationTime);
         configuration.put("TOGGLED", _isToggled);
         if (_customText != null) configuration.put("TXT", _customText);
 
@@ -723,6 +823,16 @@ public abstract class VirtualControllerElement extends View {
         _rotation = (float) configuration.optDouble("ROT", 0);
         _isToggleMode = configuration.optBoolean("TOGGLE", false);
         _isTouchThrough = configuration.optBoolean("TOUCH_THROUGH", false);
+        _isRepeatMode = configuration.optBoolean("REPEAT", false);
+        _repeatInterval = configuration.optLong("INTERVAL", 1000);
+        _activationTime = configuration.optLong("ACTIVE_TIME", 100);
+        _isOrderingMode = configuration.optBoolean("ORDERING", false);
+        _orderActivationTime = configuration.optLong("ORD_ACT", 100);
+        _orderGapTime = configuration.optLong("ORD_GAP", 100);
+        _applyOnHold = configuration.optBoolean("ORD_HOLD", false);
+        _isHoldRepeat = configuration.optBoolean("HOLD_REP", false);
+        _holdRepeatDelay = configuration.optLong("HOLD_DLY", 1000);
+        _holdActivationTime = configuration.optLong("HOLD_ACT", 100);
         _isToggled = configuration.optBoolean("TOGGLED", false);
         
         if (configuration.has("TXT") && !configuration.isNull("TXT")) {

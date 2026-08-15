@@ -33,15 +33,16 @@ import com.limelight.nvstream.input.ControllerPacket;
 public class ConfigureVirtualControllerActivity extends Activity {
 
     private VirtualController virtualController;
-    private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer;
+    private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer, repeatContainer, activationContainer, orderingContainer, orderSettingsContainer, holdRepeatContainer, holdRepeatSettings;
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
-    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner;
+    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit;
     private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider;
     private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText;
     private LinearLayout directionalBindings;
     private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton;
-    private android.widget.CheckBox toggleModeCheckbox, touchThroughCheckbox;
+    private android.widget.CheckBox toggleModeCheckbox, touchThroughCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox;
+    private android.widget.EditText repeatIntervalEdit, activationTimeEdit, orderActivationEdit, orderGapEdit, holdRepeatDelayEdit, holdActivationEdit;
     private boolean isUpdatingUI = false;
 
     private final String[] MODES = {"Gamepad", "Keyboard", "Mouse", "Combined"};
@@ -67,13 +68,13 @@ public class ConfigureVirtualControllerActivity extends Activity {
 
     private final String[] KEY_NAMES = {
         "None", "Space", "Enter", "Escape", "Backspace", "Tab", "Shift", "Ctrl", "Alt",
-        "W", "A", "S", "D", "Q", "E", "R", "F", "C", "X", "Z", "V",
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
         "Up", "Down", "Left", "Right", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
         "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"
     };
     private final short[] KEY_CODES = {
         0, 0x20, 0x0D, 0x1B, 0x08, 0x09, 0xA0, 0xA2, 0xA4,
-        0x57, 0x41, 0x53, 0x44, 0x51, 0x45, 0x52, 0x46, 0x43, 0x58, 0x5A, 0x56,
+        0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A,
         0x26, 0x28, 0x25, 0x27, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
         0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C
     };
@@ -238,6 +239,31 @@ public class ConfigureVirtualControllerActivity extends Activity {
         setCustomTextButton = findViewById(R.id.setCustomTextButton);
         toggleModeCheckbox = findViewById(R.id.toggleModeCheckbox);
         touchThroughCheckbox = findViewById(R.id.touchThroughCheckbox);
+        repeatModeCheckbox = findViewById(R.id.repeatModeCheckbox);
+        repeatContainer = findViewById(R.id.repeatContainer);
+        repeatIntervalEdit = findViewById(R.id.repeatIntervalEdit);
+        repeatUnitSpinner = findViewById(R.id.repeatUnitSpinner);
+        
+        activationContainer = findViewById(R.id.activationContainer);
+        activationTimeEdit = findViewById(R.id.activationTimeEdit);
+        activationUnitSpinner = findViewById(R.id.activationUnitSpinner);
+        
+        orderingContainer = findViewById(R.id.orderingContainer);
+        orderSettingsContainer = findViewById(R.id.orderSettingsContainer);
+        orderingCheckbox = findViewById(R.id.orderingCheckbox);
+        applyOnHoldCheckbox = findViewById(R.id.applyOnHoldCheckbox);
+        holdRepeatContainer = findViewById(R.id.holdRepeatContainer);
+        holdRepeatCheckbox = findViewById(R.id.holdRepeatCheckbox);
+        holdRepeatSettings = findViewById(R.id.holdRepeatSettings);
+        holdRepeatDelayEdit = findViewById(R.id.holdRepeatDelayEdit);
+        holdActivationEdit = findViewById(R.id.holdActivationEdit);
+        holdRepeatDelayUnit = findViewById(R.id.holdRepeatDelayUnit);
+        holdActivationUnit = findViewById(R.id.holdActivationUnit);
+        
+        orderActivationEdit = findViewById(R.id.orderActivationEdit);
+        orderGapEdit = findViewById(R.id.orderGapEdit);
+        orderActivationUnitSpinner = findViewById(R.id.orderActivationUnitSpinner);
+        orderGapUnitSpinner = findViewById(R.id.orderGapUnitSpinner);
 
         mappingModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, MODES));
         shapeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, SHAPES));
@@ -493,6 +519,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
             VirtualControllerElement selected = virtualController.getSelectedElement();
             if (selected != null) {
                 selected.setToggleMode(isChecked);
+                updatePropertiesVisibility(selected);
             }
         });
 
@@ -503,14 +530,155 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 selected.setTouchThrough(isChecked);
             }
         });
+
+        orderingCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setOrderingMode(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        applyOnHoldCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setApplyOnHold(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        holdRepeatCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setHoldRepeat(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        holdRepeatDelayEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                updateHoldRepeatDelay();
+            }
+        });
+
+        holdActivationEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                updateHoldActivation();
+            }
+        });
+
+        holdRepeatDelayUnit.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateHoldRepeatDelay();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        holdActivationUnit.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateHoldActivation();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        repeatModeCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setRepeatMode(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        repeatIntervalEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                updateRepeatInterval();
+            }
+        });
+
+        repeatUnitSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateRepeatInterval();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        activationTimeEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                updateActivationTime();
+            }
+        });
+
+        activationUnitSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateActivationTime();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        orderActivationEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                updateOrderActivation();
+            }
+        });
+
+        orderGapEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                updateOrderGap();
+            }
+        });
+
+        orderActivationUnitSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateOrderActivation();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        orderGapUnitSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateOrderGap();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
     }
 
     private void updatePropertiesVisibility(VirtualControllerElement selected) {
         boolean isStick = (selected instanceof AnalogStick) || (selected instanceof DigitalPad);
-        boolean isCombo = selected.isCombinedMapping();
-        boolean isKbd = selected.isKeyboardMapping();
-
+        
         directionalBindings.setVisibility(isStick ? View.VISIBLE : View.GONE);
+        
+        // Automation / Logic section
+        boolean orderingOn = !isStick && selected.isOrderingMode();
+        boolean applyOnHold = orderingOn && selected.isApplyOnHold();
+        boolean holdRepeatOn = applyOnHold && selected.isHoldRepeat();
+
+        orderingContainer.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        applyOnHoldCheckbox.setVisibility(orderingOn ? View.VISIBLE : View.GONE);
+        holdRepeatContainer.setVisibility(applyOnHold ? View.VISIBLE : View.GONE);
+        
+        // Hide Order Activation/Gap if Hold Repeat is active to avoid conflict
+        orderSettingsContainer.setVisibility(orderingOn && !holdRepeatOn ? View.VISIBLE : View.GONE);
+        holdRepeatSettings.setVisibility(holdRepeatOn ? View.VISIBLE : View.GONE);
 
         int mode = selected.isCombinedMapping() ? 3 : (selected.isKeyboardMapping() ? 1 : (selected.isMouseMapping() ? 2 : 0));
 
@@ -520,6 +688,16 @@ public class ConfigureVirtualControllerActivity extends Activity {
 
         toggleModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
         touchThroughCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        
+        // Repeat mode should be available for all buttons (repeating while held)
+        // or for toggle buttons (repeating while toggled).
+        repeatModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        
+        // Repeat settings are visible if repeat mode is enabled
+        boolean repeatOn = !isStick && selected.isRepeatMode();
+        repeatContainer.setVisibility(repeatOn ? View.VISIBLE : View.GONE);
+        activationContainer.setVisibility(repeatOn ? View.VISIBLE : View.GONE);
+        
         setCustomTextButton.setVisibility(!isStick ? View.VISIBLE : View.GONE);
 
         bindingLabel.setVisibility(View.GONE);
@@ -536,7 +714,6 @@ public class ConfigureVirtualControllerActivity extends Activity {
         isUpdatingUI = true;
         panelTitle.setText("Properties");
         propertiesContainer.setVisibility(View.VISIBLE);
-
 
         if (element.isCombinedMapping()) mappingModeSpinner.setSelection(3);
         else if (element.isKeyboardMapping()) mappingModeSpinner.setSelection(1);
@@ -573,6 +750,67 @@ public class ConfigureVirtualControllerActivity extends Activity {
         shapeSpinner.setSelection(element.getShape().ordinal());
         toggleModeCheckbox.setChecked(element.isToggleMode());
         touchThroughCheckbox.setChecked(element.isTouchThrough());
+        orderingCheckbox.setChecked(element.isOrderingMode());
+        applyOnHoldCheckbox.setChecked(element.isApplyOnHold());
+        holdRepeatCheckbox.setChecked(element.isHoldRepeat());
+        
+        long hDelay = element.getHoldRepeatDelay();
+        if (hDelay >= 1000 && hDelay % 1000 == 0) {
+            holdRepeatDelayEdit.setText(String.valueOf(hDelay / 1000));
+            holdRepeatDelayUnit.setSelection(1);
+        } else {
+            holdRepeatDelayEdit.setText(String.valueOf(hDelay));
+            holdRepeatDelayUnit.setSelection(0);
+        }
+
+        long hAct = element.getHoldActivationTime();
+        if (hAct >= 1000 && hAct % 1000 == 0) {
+            holdActivationEdit.setText(String.valueOf(hAct / 1000));
+            holdActivationUnit.setSelection(1);
+        } else {
+            holdActivationEdit.setText(String.valueOf(hAct));
+            holdActivationUnit.setSelection(0);
+        }
+        
+        // Repeating Settings
+        repeatModeCheckbox.setChecked(element.isRepeatMode());
+        long interval = element.getRepeatInterval();
+        if (interval >= 1000 && interval % 1000 == 0) {
+            repeatIntervalEdit.setText(String.valueOf(interval / 1000));
+            repeatUnitSpinner.setSelection(1);
+        } else {
+            repeatIntervalEdit.setText(String.valueOf(interval));
+            repeatUnitSpinner.setSelection(0);
+        }
+
+        long activeTime = element.getActivationTime();
+        if (activeTime >= 1000 && activeTime % 1000 == 0) {
+            activationTimeEdit.setText(String.valueOf(activeTime / 1000));
+            activationUnitSpinner.setSelection(1);
+        } else {
+            activationTimeEdit.setText(String.valueOf(activeTime));
+            activationUnitSpinner.setSelection(0);
+        }
+
+        // Ordering Settings
+        orderingCheckbox.setChecked(element.isOrderingMode());
+        long oActTime = element.getOrderActivationTime();
+        if (oActTime >= 1000 && oActTime % 1000 == 0) {
+            orderActivationEdit.setText(String.valueOf(oActTime / 1000));
+            orderActivationUnitSpinner.setSelection(1);
+        } else {
+            orderActivationEdit.setText(String.valueOf(oActTime));
+            orderActivationUnitSpinner.setSelection(0);
+        }
+
+        long oGapTime = element.getOrderGapTime();
+        if (oGapTime >= 1000 && oGapTime % 1000 == 0) {
+            orderGapEdit.setText(String.valueOf(oGapTime / 1000));
+            orderGapUnitSpinner.setSelection(1);
+        } else {
+            orderGapEdit.setText(String.valueOf(oGapTime));
+            orderGapUnitSpinner.setSelection(0);
+        }
 
         int customColor = element.getCustomColor();
         int colorPos = 0;
@@ -587,12 +825,11 @@ public class ConfigureVirtualControllerActivity extends Activity {
         extraGpContainer.removeAllViews();
         extraKbdContainer.removeAllViews();
         extraMsContainer.removeAllViews();
-        int mappingMode = mappingModeSpinner.getSelectedItemPosition();
         boolean isStick = (element instanceof AnalogStick) || (element instanceof DigitalPad);
 
         if (!isStick) {
             // Gamepad Section
-            if (mappingMode == 0 || mappingMode == 3) {
+            if (mode == 0 || mode == 3) {
                 setGpButton.setText("Button 1: " + getGamepadButtonName(element.getGamepadFlag()));
                 java.util.List<Integer> extraGp = element.getExtraGamepadFlags();
                 for (int i = 0; i < extraGp.size(); i++) {
@@ -613,7 +850,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
             }
 
             // Keyboard Section
-            if (mappingMode == 1 || mappingMode == 3) {
+            if (mode == 1 || mode == 3) {
                 setKeyboardButton.setText("Key 1: " + getKeyName(element.getMappedKeyCode()));
                 java.util.List<Short> extraKeys = element.getExtraKeyCodes();
                 for (int i = 0; i < extraKeys.size(); i++) {
@@ -634,7 +871,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
             }
 
             // Mouse Section
-            if (mappingMode == 2 || mappingMode == 3) {
+            if (mode == 2 || mode == 3) {
                 setMsButton.setText("Action 1: " + element.getMouseAction().name());
                 java.util.List<VirtualControllerElement.MouseAction> extraMs = element.getExtraMouseActions();
                 for (int i = 0; i < extraMs.size(); i++) {
@@ -655,14 +892,6 @@ public class ConfigureVirtualControllerActivity extends Activity {
             }
         } else {
             // Analog stick / Digital pad
-            updateDirButton(bindUp, "UP", element.getMappedKeyUp(), element.getMappedDirUpGamepadFlag(), element.getMappedDirUpMouseAction());
-            updateDirButton(bindDown, "DOWN", element.getMappedKeyDown(), element.getMappedDirDownGamepadFlag(), element.getMappedDirDownMouseAction());
-            updateDirButton(bindLeft, "LEFT", element.getMappedKeyLeft(), element.getMappedDirLeftGamepadFlag(), element.getMappedDirLeftMouseAction());
-            updateDirButton(bindRight, "RIGHT", element.getMappedKeyRight(), element.getMappedDirRightGamepadFlag(), element.getMappedDirRightMouseAction());
-        }
-
-        boolean isStickVar = (element instanceof AnalogStick) || (element instanceof DigitalPad);
-        if (isStick) {
             updateDirButton(bindUp, "UP", element.getMappedKeyUp(), element.getMappedDirUpGamepadFlag(), element.getMappedDirUpMouseAction());
             updateDirButton(bindDown, "DOWN", element.getMappedKeyDown(), element.getMappedDirDownGamepadFlag(), element.getMappedDirDownMouseAction());
             updateDirButton(bindLeft, "LEFT", element.getMappedKeyLeft(), element.getMappedDirLeftGamepadFlag(), element.getMappedDirLeftMouseAction());
@@ -779,5 +1008,83 @@ public class ConfigureVirtualControllerActivity extends Activity {
             else if (dir == 3) { selected.setMappedDirRightMouseAction(action); selected.setMappedKeyRight((short)0); selected.setMappedDirRightGamepadFlag(0); }
             updateSidePanel(selected);
         }).show();
+    }
+
+    private void updateHoldRepeatDelay() {
+        if (isUpdatingUI) return;
+        VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (selected == null) return;
+        try {
+            String s = holdRepeatDelayEdit.getText().toString();
+            if (s.isEmpty()) return;
+            long val = Long.parseLong(s);
+            if (holdRepeatDelayUnit.getSelectedItemPosition() == 1) val *= 1000;
+            selected.setHoldRepeatDelay(val);
+        } catch (Exception e) {}
+    }
+
+    private void updateHoldActivation() {
+        if (isUpdatingUI) return;
+        VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (selected == null) return;
+        try {
+            String s = holdActivationEdit.getText().toString();
+            if (s.isEmpty()) return;
+            long val = Long.parseLong(s);
+            if (holdActivationUnit.getSelectedItemPosition() == 1) val *= 1000;
+            selected.setHoldActivationTime(val);
+        } catch (Exception e) {}
+    }
+
+    private void updateRepeatInterval() {
+        if (isUpdatingUI) return;
+        VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (selected == null) return;
+        try {
+            String s = repeatIntervalEdit.getText().toString();
+            if (s.isEmpty()) return;
+            long val = Long.parseLong(s);
+            if (repeatUnitSpinner.getSelectedItemPosition() == 1) val *= 1000;
+            selected.setRepeatInterval(val);
+        } catch (Exception e) {}
+    }
+
+    private void updateActivationTime() {
+        if (isUpdatingUI) return;
+        VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (selected == null) return;
+        try {
+            String s = activationTimeEdit.getText().toString();
+            if (s.isEmpty()) return;
+            long val = Long.parseLong(s);
+            if (activationUnitSpinner.getSelectedItemPosition() == 1) val *= 1000;
+            selected.setActivationTime(val);
+        } catch (Exception e) {}
+    }
+
+    private void updateOrderActivation() {
+        if (isUpdatingUI) return;
+        VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (selected == null) return;
+        try {
+            String s = orderActivationEdit.getText().toString();
+            if (s.isEmpty()) return;
+            long val = Long.parseLong(s);
+            if (orderActivationUnitSpinner.getSelectedItemPosition() == 1) val *= 1000;
+            selected.setOrderActivationTime(val);
+        } catch (Exception e) {}
+    }
+
+    private void updateOrderGap() {
+        if (isUpdatingUI) return;
+        VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (selected == null) return;
+        try {
+            String s = orderGapEdit.getText().toString();
+            if (s.isEmpty()) return;
+            long val = Long.parseLong(s);
+            if (orderGapUnitSpinner.getSelectedItemPosition() == 1) val *= 1000;
+            selected.setOrderGapTime(val);
+        } catch (Exception e) {}
     }
 }
