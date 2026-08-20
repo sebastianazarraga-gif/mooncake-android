@@ -29,6 +29,7 @@ import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.limelight.preferences.StreamSettings;
 import com.limelight.ui.GameGestures;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
@@ -47,8 +48,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.core.view.GravityCompat;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -74,8 +78,10 @@ import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -533,6 +539,124 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // The connection will be started when the surface gets created
         streamView.getHolder().addCallback(this);
+
+        // --- Side Panel Master Setup ---
+        DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
+        View settingsBtn = findViewById(R.id.sidePanelFullSettingsButton);
+        View closeBtn = findViewById(R.id.sidePanelCloseButton);
+        
+        CheckBox perfOverlayChk = findViewById(R.id.sidePanelPerfOverlay);
+        CheckBox oscToggleChk = findViewById(R.id.sidePanelOscToggle);
+        CheckBox onlyL3R3Chk = findViewById(R.id.sidePanelOnlyL3R3);
+        CheckBox guideBtnChk = findViewById(R.id.sidePanelGuideButton);
+        CheckBox stretchChk = findViewById(R.id.sidePanelStretchToggle);
+        CheckBox hdrChk = findViewById(R.id.sidePanelHdrToggle);
+        CheckBox fullRangeChk = findViewById(R.id.sidePanelFullRange);
+        CheckBox trackpadChk = findViewById(R.id.sidePanelTrackpadToggle);
+        CheckBox mouseEmuChk = findViewById(R.id.sidePanelMouseEmuToggle);
+        CheckBox absMouseChk = findViewById(R.id.sidePanelAbsoluteMouse);
+        CheckBox mouseNavChk = findViewById(R.id.sidePanelMouseNav);
+        CheckBox vibrateChk = findViewById(R.id.sidePanelVibrateToggle);
+        CheckBox flipFaceChk = findViewById(R.id.sidePanelFlipFace);
+        CheckBox hostAudioChk = findViewById(R.id.sidePanelHostAudioToggle);
+        CheckBox multiConChk = findViewById(R.id.sidePanelMultiConToggle);
+        CheckBox audioFxChk = findViewById(R.id.sidePanelAudioFx);
+        CheckBox reduceRefreshChk = findViewById(R.id.sidePanelReduceRefresh);
+        CheckBox motionSensorsChk = findViewById(R.id.sidePanelMotionSensors);
+        CheckBox motionFallbackChk = findViewById(R.id.sidePanelMotionFallback);
+        CheckBox touchpadAsMouseChk = findViewById(R.id.sidePanelTouchpadAsMouse);
+
+        SeekBar bitrateSeek = findViewById(R.id.sidePanelBitrateSeek);
+        TextView bitrateTxt = findViewById(R.id.sidePanelBitrateText);
+        SeekBar mouseSensSeek = findViewById(R.id.sidePanelMouseSensSeek);
+        TextView mouseSensTxt = findViewById(R.id.sidePanelMouseSensText);
+        SeekBar oscOpacitySeek = findViewById(R.id.sidePanelOscOpacitySeek);
+        TextView oscOpacityTxt = findViewById(R.id.sidePanelOscOpacityText);
+
+        if (drawerLayout != null) {
+            drawerLayout.addDrawerListener(new DrawerLayout.SimpleDrawerListener() {
+                @Override
+                public void onDrawerOpened(View drawerView) {
+                    if (perfOverlayChk != null) perfOverlayChk.setChecked(prefConfig.enablePerfOverlay);
+                    if (oscToggleChk != null) oscToggleChk.setChecked(prefConfig.onscreenController);
+                    if (onlyL3R3Chk != null) onlyL3R3Chk.setChecked(prefConfig.onlyL3R3);
+                    if (guideBtnChk != null) guideBtnChk.setChecked(prefConfig.showGuideButton);
+                    if (stretchChk != null) stretchChk.setChecked(prefConfig.stretchVideo);
+                    if (hdrChk != null) hdrChk.setChecked(prefConfig.enableHdr);
+                    if (fullRangeChk != null) fullRangeChk.setChecked(prefConfig.fullRange);
+                    if (trackpadChk != null) trackpadChk.setChecked(prefConfig.touchscreenTrackpad);
+                    if (mouseEmuChk != null) mouseEmuChk.setChecked(prefConfig.mouseEmulation);
+                    if (absMouseChk != null) absMouseChk.setChecked(prefConfig.absoluteMouseMode);
+                    if (mouseNavChk != null) mouseNavChk.setChecked(prefConfig.mouseNavButtons);
+                    if (vibrateChk != null) vibrateChk.setChecked(prefConfig.vibrateOsc);
+                    if (flipFaceChk != null) flipFaceChk.setChecked(prefConfig.flipFaceButtons);
+                    if (hostAudioChk != null) hostAudioChk.setChecked(prefConfig.playHostAudio);
+                    if (multiConChk != null) multiConChk.setChecked(prefConfig.multiController);
+                    if (audioFxChk != null) audioFxChk.setChecked(prefConfig.enableAudioFx);
+                    if (reduceRefreshChk != null) reduceRefreshChk.setChecked(prefConfig.reduceRefreshRate);
+                    if (motionSensorsChk != null) motionSensorsChk.setChecked(prefConfig.gamepadMotionSensors);
+                    if (motionFallbackChk != null) motionFallbackChk.setChecked(prefConfig.gamepadMotionSensorsFallbackToDevice);
+                    if (touchpadAsMouseChk != null) touchpadAsMouseChk.setChecked(prefConfig.gamepadTouchpadAsMouse);
+
+                    if (bitrateSeek != null) {
+                        bitrateSeek.setProgress(prefConfig.bitrate / 1000);
+                        if (bitrateTxt != null) bitrateTxt.setText((prefConfig.bitrate / 1000) + " Mbps");
+                    }
+                    if (mouseSensSeek != null) {
+                        mouseSensSeek.setProgress(prefConfig.mouseSensitivity);
+                        if (mouseSensTxt != null) mouseSensTxt.setText(prefConfig.mouseSensitivity + "%");
+                    }
+                    if (oscOpacitySeek != null) {
+                        oscOpacitySeek.setProgress(prefConfig.oscOpacity);
+                        if (oscOpacityTxt != null) oscOpacityTxt.setText(prefConfig.oscOpacity + "%");
+                    }
+                }
+            });
+
+            if (closeBtn != null) closeBtn.setOnClickListener(v -> drawerLayout.closeDrawer(GravityCompat.START));
+            if (settingsBtn != null) {
+                settingsBtn.setOnClickListener(v -> {
+                    startActivity(new Intent(this, StreamSettings.class));
+                    drawerLayout.closeDrawer(GravityCompat.START);
+                });
+            }
+
+            SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(this).edit();
+
+            if (perfOverlayChk != null) perfOverlayChk.setOnCheckedChangeListener((b, c) -> { prefConfig.enablePerfOverlay = c; edit.putBoolean("checkbox_enable_perf_overlay", c).apply(); if (performanceOverlayView != null) performanceOverlayView.setVisibility(c ? View.VISIBLE : View.GONE); });
+            if (oscToggleChk != null) oscToggleChk.setOnCheckedChangeListener((b, c) -> { prefConfig.onscreenController = c; edit.putBoolean("checkbox_show_onscreen_controls", c).apply(); if (virtualController != null) { if (c) virtualController.show(); else virtualController.hide(); } });
+            if (onlyL3R3Chk != null) onlyL3R3Chk.setOnCheckedChangeListener((b, c) -> { prefConfig.onlyL3R3 = c; edit.putBoolean("checkbox_only_show_L3R3", c).apply(); if (virtualController != null) virtualController.refreshLayout(); });
+            if (guideBtnChk != null) guideBtnChk.setOnCheckedChangeListener((b, c) -> { prefConfig.showGuideButton = c; edit.putBoolean("checkbox_show_guide_button", c).apply(); if (virtualController != null) virtualController.refreshLayout(); });
+            if (stretchChk != null) stretchChk.setOnCheckedChangeListener((b, c) -> { prefConfig.stretchVideo = c; edit.putBoolean("checkbox_stretch_video", c).apply(); });
+            if (hdrChk != null) hdrChk.setOnCheckedChangeListener((b, c) -> { prefConfig.enableHdr = c; edit.putBoolean("checkbox_enable_hdr", c).apply(); });
+            if (fullRangeChk != null) fullRangeChk.setOnCheckedChangeListener((b, c) -> { prefConfig.fullRange = c; edit.putBoolean("checkbox_full_range", c).apply(); });
+            if (trackpadChk != null) trackpadChk.setOnCheckedChangeListener((b, c) -> { prefConfig.touchscreenTrackpad = c; edit.putBoolean("checkbox_touchscreen_trackpad", c).apply(); });
+            if (mouseEmuChk != null) mouseEmuChk.setOnCheckedChangeListener((b, c) -> { prefConfig.mouseEmulation = c; edit.putBoolean("checkbox_mouse_emulation", c).apply(); });
+            if (absMouseChk != null) absMouseChk.setOnCheckedChangeListener((b, c) -> { prefConfig.absoluteMouseMode = c; edit.putBoolean("checkbox_absolute_mouse_mode", c).apply(); });
+            if (mouseNavChk != null) mouseNavChk.setOnCheckedChangeListener((b, c) -> { prefConfig.mouseNavButtons = c; edit.putBoolean("checkbox_mouse_nav_buttons", c).apply(); });
+            if (vibrateChk != null) vibrateChk.setOnCheckedChangeListener((b, c) -> { prefConfig.vibrateOsc = c; edit.putBoolean("checkbox_vibrate_osc", c).apply(); });
+            if (flipFaceChk != null) flipFaceChk.setOnCheckedChangeListener((b, c) -> { prefConfig.flipFaceButtons = c; edit.putBoolean("checkbox_flip_face_buttons", c).apply(); if (virtualController != null) virtualController.refreshLayout(); });
+            if (hostAudioChk != null) hostAudioChk.setOnCheckedChangeListener((b, c) -> { prefConfig.playHostAudio = c; edit.putBoolean("checkbox_host_audio", c).apply(); });
+            if (multiConChk != null) multiConChk.setOnCheckedChangeListener((b, c) -> { prefConfig.multiController = c; edit.putBoolean("checkbox_multi_controller", c).apply(); });
+            if (audioFxChk != null) audioFxChk.setOnCheckedChangeListener((b, c) -> { prefConfig.enableAudioFx = c; edit.putBoolean("checkbox_enable_audiofx", c).apply(); });
+            if (reduceRefreshChk != null) reduceRefreshChk.setOnCheckedChangeListener((b, c) -> { prefConfig.reduceRefreshRate = c; edit.putBoolean("checkbox_reduce_refresh_rate", c).apply(); });
+            if (motionSensorsChk != null) motionSensorsChk.setOnCheckedChangeListener((b, c) -> { prefConfig.gamepadMotionSensors = c; edit.putBoolean("checkbox_gamepad_motion_sensors", c).apply(); });
+            if (motionFallbackChk != null) motionFallbackChk.setOnCheckedChangeListener((b, c) -> { prefConfig.gamepadMotionSensorsFallbackToDevice = c; edit.putBoolean("checkbox_gamepad_motion_fallback", c).apply(); });
+            if (touchpadAsMouseChk != null) touchpadAsMouseChk.setOnCheckedChangeListener((b, c) -> { prefConfig.gamepadTouchpadAsMouse = c; edit.putBoolean("checkbox_gamepad_touchpad_as_mouse", c).apply(); });
+
+            if (bitrateSeek != null) bitrateSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar s, int p, boolean u) { if (u) { bitrateTxt.setText(p + " Mbps"); prefConfig.bitrate = p * 1000; edit.putInt("seekbar_bitrate_kbps", prefConfig.bitrate).apply(); } }
+                @Override public void onStartTrackingTouch(SeekBar s) {} @Override public void onStopTrackingTouch(SeekBar s) {}
+            });
+            if (mouseSensSeek != null) mouseSensSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar s, int p, boolean u) { if (u) { mouseSensTxt.setText(p + "%"); prefConfig.mouseSensitivity = p; edit.putInt("seekbar_mouse_sensitivity", p).apply(); } }
+                @Override public void onStartTrackingTouch(SeekBar s) {} @Override public void onStopTrackingTouch(SeekBar s) {}
+            });
+            if (oscOpacitySeek != null) oscOpacitySeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar s, int p, boolean u) { if (u) { oscOpacityTxt.setText(p + "%"); prefConfig.oscOpacity = p; edit.putInt("seekbar_osc_opacity", p).apply(); if (virtualController != null) virtualController.refreshLayout(); } }
+                @Override public void onStartTrackingTouch(SeekBar s) {} @Override public void onStopTrackingTouch(SeekBar s) {}
+            });
+        }
     }
 
     private void setPreferredOrientationForCurrentDisplay() {
