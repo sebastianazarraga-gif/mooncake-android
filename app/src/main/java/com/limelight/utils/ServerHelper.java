@@ -6,7 +6,7 @@ import android.widget.Toast;
 
 import com.limelight.AppView;
 import com.limelight.Game;
-import com.limelight.R;
+import com.mooncake.R;
 import com.limelight.ShortcutTrampoline;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.computers.ComputerManagerService;

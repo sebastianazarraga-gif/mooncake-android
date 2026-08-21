@@ -1,5 +1,7 @@
 package com.limelight;
 
+import com.mooncake.R;
+
 
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
@@ -13,6 +15,7 @@ import com.limelight.binding.input.driver.UsbDriverService;
 import com.limelight.binding.input.evdev.EvdevListener;
 import com.limelight.binding.input.touch.TouchContext;
 import com.limelight.binding.input.virtual_controller.VirtualController;
+import com.limelight.binding.input.virtual_controller.VirtualControllerConfigurationLoader;
 import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
@@ -82,6 +85,9 @@ import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.SeekBar;
+import android.widget.Spinner;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -566,6 +572,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         CheckBox motionFallbackChk = findViewById(R.id.sidePanelMotionFallback);
         CheckBox touchpadAsMouseChk = findViewById(R.id.sidePanelTouchpadAsMouse);
 
+        Spinner savesSpinner = findViewById(R.id.savesSpinner);
+
         SeekBar bitrateSeek = findViewById(R.id.sidePanelBitrateSeek);
         TextView bitrateTxt = findViewById(R.id.sidePanelBitrateText);
         SeekBar mouseSensSeek = findViewById(R.id.sidePanelMouseSensSeek);
@@ -597,6 +605,15 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     if (motionSensorsChk != null) motionSensorsChk.setChecked(prefConfig.gamepadMotionSensors);
                     if (motionFallbackChk != null) motionFallbackChk.setChecked(prefConfig.gamepadMotionSensorsFallbackToDevice);
                     if (touchpadAsMouseChk != null) touchpadAsMouseChk.setChecked(prefConfig.gamepadTouchpadAsMouse);
+
+                    if (savesSpinner != null) {
+                        java.util.List<String> profiles = VirtualControllerConfigurationLoader.getProfileList(Game.this);
+                        ArrayAdapter<String> adapter = new ArrayAdapter<>(Game.this, android.R.layout.simple_spinner_dropdown_item, profiles);
+                        savesSpinner.setAdapter(adapter);
+                        String current = VirtualControllerConfigurationLoader.getCurrentProfileName(Game.this);
+                        int pos = profiles.indexOf(current);
+                        if (pos >= 0) savesSpinner.setSelection(pos);
+                    }
 
                     if (bitrateSeek != null) {
                         bitrateSeek.setProgress(prefConfig.bitrate / 1000);
@@ -643,6 +660,22 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             if (motionSensorsChk != null) motionSensorsChk.setOnCheckedChangeListener((b, c) -> { prefConfig.gamepadMotionSensors = c; edit.putBoolean("checkbox_gamepad_motion_sensors", c).apply(); });
             if (motionFallbackChk != null) motionFallbackChk.setOnCheckedChangeListener((b, c) -> { prefConfig.gamepadMotionSensorsFallbackToDevice = c; edit.putBoolean("checkbox_gamepad_motion_fallback", c).apply(); });
             if (touchpadAsMouseChk != null) touchpadAsMouseChk.setOnCheckedChangeListener((b, c) -> { prefConfig.gamepadTouchpadAsMouse = c; edit.putBoolean("checkbox_gamepad_touchpad_as_mouse", c).apply(); });
+
+            if (savesSpinner != null) {
+                savesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        String selected = (String) parent.getItemAtPosition(position);
+                        if (!selected.equals(VirtualControllerConfigurationLoader.getCurrentProfileName(Game.this))) {
+                            VirtualControllerConfigurationLoader.setCurrentProfileName(Game.this, selected);
+                            if (virtualController != null) {
+                                virtualController.refreshLayout();
+                            }
+                        }
+                    }
+                    @Override public void onNothingSelected(AdapterView<?> parent) {}
+                });
+            }
 
             if (bitrateSeek != null) bitrateSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override public void onProgressChanged(SeekBar s, int p, boolean u) { if (u) { bitrateTxt.setText(p + " Mbps"); prefConfig.bitrate = p * 1000; edit.putInt("seekbar_bitrate_kbps", prefConfig.bitrate).apply(); } }
@@ -2160,6 +2193,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 {
                 case MotionEvent.ACTION_POINTER_DOWN:
                 case MotionEvent.ACTION_DOWN:
+                    if (virtualController != null && !virtualController.isDispatchingTouchThrough()) {
+                        virtualController.incrementBackgroundTouchCount();
+                    }
                     for (TouchContext touchContext : touchContextMap) {
                         touchContext.setPointerCount(event.getPointerCount());
                     }
@@ -2167,6 +2203,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     break;
                 case MotionEvent.ACTION_POINTER_UP:
                 case MotionEvent.ACTION_UP:
+                    if (virtualController != null && !virtualController.isDispatchingTouchThrough()) {
+                        virtualController.decrementBackgroundTouchCount();
+                    }
                     if (event.getPointerCount() == 1 &&
                             (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || (event.getFlags() & MotionEvent.FLAG_CANCELED) == 0)) {
                         // All fingers up

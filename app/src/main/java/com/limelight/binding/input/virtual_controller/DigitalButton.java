@@ -38,6 +38,7 @@ public class DigitalButton extends VirtualControllerElement {
     private int icon = -1;
     private long timerLongClickTimeout = 3000;
     private boolean lastReportedState = false;
+    private boolean isDispatchedToBackground = false;
 
     private final Runnable longClickRunnable = new Runnable() {
         @Override
@@ -113,7 +114,12 @@ public class DigitalButton extends VirtualControllerElement {
 
                 case GAPPING:
                     // Release the key we just pressed
-                    if (currentActionIdx < actionSequence.size()) {
+                    // Fix: If "Apply on hold" is enabled and this is the last action in the sequence,
+                    // do not release it until the button is actually released by the user.
+                    boolean isLastAction = (currentActionIdx >= actionSequence.size() - 1);
+                    boolean shouldReleaseNow = !isLastAction || !_applyOnHold || (_applyOnHold && _isHoldRepeat);
+
+                    if (shouldReleaseNow && currentActionIdx < actionSequence.size()) {
                         executeAction(actionSequence.get(currentActionIdx), false);
                     }
                     
@@ -416,7 +422,38 @@ public class DigitalButton extends VirtualControllerElement {
 
     @Override
     public boolean onElementTouchEvent(MotionEvent event) {
-        if (_isTouchThrough) dispatchToBackground(event);
+        if (_isTouchThrough) {
+            boolean hasConflict = _avoidTouchThroughConflict && virtualController.isBackgroundTouched();
+            
+            if (!hasConflict) {
+                if (!isDispatchedToBackground) {
+                    // Send a fake DOWN event if we are starting mid-stream (after conflict cleared)
+                    if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                        // First send a CANCEL to the background to ensure it's clean
+                        MotionEvent cancelEvent = MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_CANCEL, event.getX(), event.getY(), event.getMetaState());
+                        dispatchToBackground(cancelEvent);
+                        cancelEvent.recycle();
+
+                        // Then send the new DOWN
+                        MotionEvent downEvent = MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_DOWN, event.getX(), event.getY(), event.getMetaState());
+                        dispatchToBackground(downEvent);
+                        downEvent.recycle();
+                    }
+                    isDispatchedToBackground = true;
+                }
+                dispatchToBackground(event);
+            } else if (isDispatchedToBackground) {
+                // If conflict suddenly appears while we were dispatching, send an UP to stop it
+                MotionEvent upEvent = MotionEvent.obtain(event.getDownTime(), event.getEventTime(), MotionEvent.ACTION_UP, event.getX(), event.getY(), event.getMetaState());
+                dispatchToBackground(upEvent);
+                upEvent.recycle();
+                isDispatchedToBackground = false;
+            }
+
+            if (event.getActionMasked() == MotionEvent.ACTION_UP || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                isDispatchedToBackground = false;
+            }
+        }
         float x = getX() + event.getX();
         float y = getY() + event.getY();
         switch (event.getActionMasked()) {
@@ -446,11 +483,13 @@ public class DigitalButton extends VirtualControllerElement {
         try {
             android.view.ViewParent parent = getParent();
             if (parent instanceof android.view.ViewGroup) {
-                android.view.View bg = ((android.view.ViewGroup) parent).findViewById(com.limelight.R.id.backgroundTouchView);
+                android.view.View bg = ((android.view.ViewGroup) parent).findViewById(com.mooncake.R.id.backgroundTouchView);
                 if (bg != null) {
                     MotionEvent clone = MotionEvent.obtain(event);
                     clone.offsetLocation(getX(), getY());
+                    virtualController.setDispatchingTouchThrough(true);
                     bg.dispatchTouchEvent(clone);
+                    virtualController.setDispatchingTouchThrough(false);
                     clone.recycle();
                 }
             }
@@ -485,6 +524,7 @@ public class DigitalButton extends VirtualControllerElement {
     }
 
     private void checkMovementForAllButtons(float x, float y) {
+        if (_isExclusiveTouch && isPressed()) return;
         for (VirtualControllerElement element : virtualController.getElements()) {
             if (element != this && element instanceof DigitalButton) {
                 ((DigitalButton) element).checkMovement(x, y, this);

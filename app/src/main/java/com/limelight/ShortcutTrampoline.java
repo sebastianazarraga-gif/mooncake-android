@@ -1,5 +1,7 @@
 package com.limelight;
 
+import com.mooncake.R;
+
 import android.app.Activity;
 import android.app.Service;
 import android.content.ComponentName;

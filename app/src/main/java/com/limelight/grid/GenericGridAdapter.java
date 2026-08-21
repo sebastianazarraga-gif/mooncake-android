@@ -9,7 +9,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.limelight.R;
+import com.mooncake.R;
 
 import java.util.ArrayList;
 

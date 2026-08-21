@@ -19,10 +19,105 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class VirtualControllerConfigurationLoader {
     public static final String OSC_PREFERENCE = "OSC";
+    public static final String PROFILES_LIST_KEY = "PROFILES_LIST";
+    public static final String CURRENT_PROFILE_KEY = "CURRENT_PROFILE";
+
+    public static String getPrefName(String profileName) {
+        if (profileName == null || profileName.isEmpty() || profileName.equals("Default")) {
+            return OSC_PREFERENCE;
+        }
+        return OSC_PREFERENCE + "_" + profileName;
+    }
+
+    public static List<String> getProfileList(Context context) {
+        SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE);
+        Set<String> set = pref.getStringSet(PROFILES_LIST_KEY, new HashSet<>());
+        List<String> list = new ArrayList<>(set);
+        if (!list.contains("Default")) list.add(0, "Default");
+        java.util.Collections.sort(list.subList(1, list.size()));
+        return list;
+    }
+
+    public static void addProfileToList(Context context, String name) {
+        SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE);
+        Set<String> set = new HashSet<>(pref.getStringSet(PROFILES_LIST_KEY, new HashSet<>()));
+        set.add(name);
+        pref.edit().putStringSet(PROFILES_LIST_KEY, set).apply();
+    }
+
+    public static String getCurrentProfileName(Context context) {
+        return context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).getString(CURRENT_PROFILE_KEY, "Default");
+    }
+
+    public static void setCurrentProfileName(Context context, String name) {
+        context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).edit().putString(CURRENT_PROFILE_KEY, name).apply();
+    }
+
+    public static void deleteProfile(Context context, String profileName) {
+        if (profileName == null || profileName.equals("Default")) return;
+
+        SharedPreferences mainPref = context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE);
+        Set<String> set = new HashSet<>(mainPref.getStringSet(PROFILES_LIST_KEY, new HashSet<>()));
+        if (set.remove(profileName)) {
+            mainPref.edit().putStringSet(PROFILES_LIST_KEY, set).apply();
+        }
+
+        // Delete the profile's SharedPreferences file content
+        String prefName = getPrefName(profileName);
+        context.getSharedPreferences(prefName, Activity.MODE_PRIVATE).edit().clear().apply();
+
+        // Reset current profile to Default if we just deleted the current one
+        if (getCurrentProfileName(context).equals(profileName)) {
+            setCurrentProfileName(context, "Default");
+        }
+    }
+
+    public static String exportProfileToJson(Context context, String profileName) {
+        String prefName = getPrefName(profileName);
+        SharedPreferences pref = context.getSharedPreferences(prefName, Context.MODE_PRIVATE);
+        JSONObject root = new JSONObject();
+        try {
+            Map<String, ?> all = pref.getAll();
+            for (Map.Entry<String, ?> entry : all.entrySet()) {
+                root.put(entry.getKey(), entry.getValue());
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return root.toString();
+    }
+
+    public static boolean importProfileFromJson(Context context, String profileName, String json) {
+        try {
+            JSONObject root = new JSONObject(json);
+            String prefName = getPrefName(profileName);
+            SharedPreferences.Editor editor = context.getSharedPreferences(prefName, Context.MODE_PRIVATE).edit();
+            editor.clear();
+            java.util.Iterator<String> keys = root.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                Object value = root.get(key);
+                if (value instanceof String) editor.putString(key, (String) value);
+                else if (value instanceof Integer) editor.putInt(key, (Integer) value);
+                else if (value instanceof Boolean) editor.putBoolean(key, (Boolean) value);
+                else if (value instanceof Long) editor.putLong(key, (Long) value);
+                else if (value instanceof Float) editor.putFloat(key, (Float) value);
+            }
+            editor.apply();
+            if (!profileName.equals("Default")) {
+                addProfileToList(context, profileName);
+            }
+            return true;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     private static int getPercent(
             int percent,
@@ -297,7 +392,14 @@ public class VirtualControllerConfigurationLoader {
 
     public static void saveProfile(final VirtualController controller,
                                    final Context context) {
-        SharedPreferences.Editor prefEditor = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE).edit();
+        saveProfile(controller, context, getCurrentProfileName(context));
+    }
+
+    public static void saveProfile(final VirtualController controller,
+                                   final Context context,
+                                   final String profileName) {
+        String prefName = getPrefName(profileName);
+        SharedPreferences.Editor prefEditor = context.getSharedPreferences(prefName, Activity.MODE_PRIVATE).edit();
         
         // Track which default elements are present
         HashSet<Integer> presentIds = new HashSet<>();
@@ -332,10 +434,20 @@ public class VirtualControllerConfigurationLoader {
 
         prefEditor.putString("CUSTOM_IDS", customIds.toString());
         prefEditor.apply();
+        
+        if (!profileName.equals("Default")) {
+            addProfileToList(context, profileName);
+        }
+        setCurrentProfileName(context, profileName);
     }
 
     public static void saveElement(final VirtualControllerElement element, final Context context) {
-        SharedPreferences.Editor prefEditor = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE).edit();
+        saveElement(element, context, getCurrentProfileName(context));
+    }
+
+    public static void saveElement(final VirtualControllerElement element, final Context context, final String profileName) {
+        String prefName = getPrefName(profileName);
+        SharedPreferences.Editor prefEditor = context.getSharedPreferences(prefName, Activity.MODE_PRIVATE).edit();
         try {
             JSONObject config = element.getConfiguration();
             config.put("HIDDEN", false);
@@ -343,7 +455,7 @@ public class VirtualControllerConfigurationLoader {
             
             // If it's a custom element, ensure it's in the CUSTOM_IDS list
             if (element.elementId >= 100) {
-                SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE);
+                SharedPreferences pref = context.getSharedPreferences(prefName, Activity.MODE_PRIVATE);
                 String customIdsJson = pref.getString("CUSTOM_IDS", "[]");
                 JSONArray customIds = new JSONArray(customIdsJson);
                 boolean exists = false;
@@ -365,7 +477,12 @@ public class VirtualControllerConfigurationLoader {
     }
 
     public static void loadFromPreferences(final VirtualController controller, final Context context) {
-        SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Activity.MODE_PRIVATE);
+        loadFromPreferences(controller, context, getCurrentProfileName(context));
+    }
+
+    public static void loadFromPreferences(final VirtualController controller, final Context context, final String profileName) {
+        String prefName = getPrefName(profileName);
+        SharedPreferences pref = context.getSharedPreferences(prefName, Activity.MODE_PRIVATE);
 
         // Track IDs we've already loaded
         Set<Integer> loadedIds = new HashSet<>();

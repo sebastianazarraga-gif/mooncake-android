@@ -14,7 +14,7 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.limelight.LimeLog;
-import com.limelight.R;
+import com.mooncake.R;
 import com.limelight.binding.input.ControllerHandler;
 
 import java.util.ArrayList;
@@ -60,6 +60,29 @@ public class VirtualController {
     private List<VirtualControllerElement> elements = new ArrayList<>();
     private VirtualControllerElement selectedElement = null;
     private boolean gridSnapping = false;
+    private boolean isVisible = true;
+    private int realBackgroundTouchCount = 0;
+    private boolean isDispatchingTouchThrough = false;
+
+    public void incrementBackgroundTouchCount() {
+        this.realBackgroundTouchCount++;
+    }
+
+    public void decrementBackgroundTouchCount() {
+        this.realBackgroundTouchCount = Math.max(0, this.realBackgroundTouchCount - 1);
+    }
+
+    public boolean isBackgroundTouched() {
+        return realBackgroundTouchCount > 0;
+    }
+
+    public void setDispatchingTouchThrough(boolean dispatching) {
+        this.isDispatchingTouchThrough = dispatching;
+    }
+
+    public boolean isDispatchingTouchThrough() {
+        return isDispatchingTouchThrough;
+    }
 
     public interface SelectionListener {
         void onElementSelected(VirtualControllerElement element);
@@ -143,6 +166,7 @@ public class VirtualController {
     }
 
     public void hide() {
+        isVisible = false;
         for (VirtualControllerElement element : elements) {
             element.setVisibility(View.INVISIBLE);
         }
@@ -151,6 +175,7 @@ public class VirtualController {
     }
 
     public void show() {
+        isVisible = true;
         for (VirtualControllerElement element : elements) {
             element.setVisibility(View.VISIBLE);
         }
@@ -240,6 +265,12 @@ public class VirtualController {
                 // Apply saved positions
                 VirtualControllerConfigurationLoader.loadFromPreferences(
                         VirtualController.this, context);
+
+                if (isVisible) {
+                    show();
+                } else {
+                    hide();
+                }
             }
         });
     }

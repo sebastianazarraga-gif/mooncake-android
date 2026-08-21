@@ -1,7 +1,10 @@
 package com.limelight;
 
+import com.mooncake.R;
+
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.GestureDetector;
@@ -36,14 +39,17 @@ public class ConfigureVirtualControllerActivity extends Activity {
     private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer, repeatContainer, activationContainer, orderingContainer, orderSettingsContainer, holdRepeatContainer, holdRepeatSettings;
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
-    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit;
+    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner;
     private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider;
     private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText;
     private LinearLayout directionalBindings;
-    private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton;
-    private android.widget.CheckBox toggleModeCheckbox, touchThroughCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox;
+    private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton, removeSaveButton, importSaveButton, exportSaveButton;
+    private android.widget.CheckBox toggleModeCheckbox, touchThroughCheckbox, avoidConflictCheckbox, exclusiveTouchCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox;
     private android.widget.EditText repeatIntervalEdit, activationTimeEdit, orderActivationEdit, orderGapEdit, holdRepeatDelayEdit, holdActivationEdit;
     private boolean isUpdatingUI = false;
+
+    private static final int REQUEST_EXPORT = 1001;
+    private static final int REQUEST_IMPORT = 1002;
 
     private final String[] MODES = {"Gamepad", "Keyboard", "Mouse", "Combined"};
     private final String[] SHAPES = {"Circle", "Square", "Square Rounded"};
@@ -109,11 +115,26 @@ public class ConfigureVirtualControllerActivity extends Activity {
         virtualController.refreshLayout();
         virtualController.show();
 
+        handleIntent(getIntent());
+
         saveButton = findViewById(R.id.saveButton);
         saveButton.setOnClickListener(v -> {
-            VirtualControllerConfigurationLoader.saveProfile(virtualController, this);
-            Toast.makeText(this, "Layout saved", Toast.LENGTH_SHORT).show();
-            finish();
+            final android.widget.EditText input = new android.widget.EditText(this);
+            input.setText(VirtualControllerConfigurationLoader.getCurrentProfileName(this));
+
+            new AlertDialog.Builder(this)
+                .setTitle(R.string.save_profile_dialog_title)
+                .setMessage(R.string.enter_profile_name)
+                .setView(input)
+                .setPositiveButton(R.string.save_button, (dialog, which) -> {
+                    String name = input.getText().toString();
+                    if (name.isEmpty()) name = "Default";
+                    VirtualControllerConfigurationLoader.saveProfile(virtualController, this, name);
+                    Toast.makeText(this, String.format(getString(R.string.profile_saved_toast), name), Toast.LENGTH_SHORT).show();
+                    updateSavesSpinner();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
         });
 
         resetButton = findViewById(R.id.resetButton);
@@ -211,6 +232,10 @@ public class ConfigureVirtualControllerActivity extends Activity {
         rotationLabel = findViewById(R.id.rotationLabel);
         sensitivitySlider = findViewById(R.id.sensitivitySlider);
         sensitivityLabel = findViewById(R.id.sensitivityLabel);
+        savesSpinner = findViewById(R.id.savesSpinner);
+        removeSaveButton = findViewById(R.id.removeSaveButton);
+        importSaveButton = findViewById(R.id.importSaveButton);
+        exportSaveButton = findViewById(R.id.exportSaveButton);
         directionalBindings = findViewById(R.id.directionalBindings);
         shapeSpinner = findViewById(R.id.shapeSpinner);
         opacitySlider = findViewById(R.id.opacitySlider);
@@ -239,6 +264,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         setCustomTextButton = findViewById(R.id.setCustomTextButton);
         toggleModeCheckbox = findViewById(R.id.toggleModeCheckbox);
         touchThroughCheckbox = findViewById(R.id.touchThroughCheckbox);
+        avoidConflictCheckbox = findViewById(R.id.avoidConflictCheckbox);
+        exclusiveTouchCheckbox = findViewById(R.id.exclusiveTouchCheckbox);
         repeatModeCheckbox = findViewById(R.id.repeatModeCheckbox);
         repeatContainer = findViewById(R.id.repeatContainer);
         repeatIntervalEdit = findViewById(R.id.repeatIntervalEdit);
@@ -264,6 +291,56 @@ public class ConfigureVirtualControllerActivity extends Activity {
         orderGapEdit = findViewById(R.id.orderGapEdit);
         orderActivationUnitSpinner = findViewById(R.id.orderActivationUnitSpinner);
         orderGapUnitSpinner = findViewById(R.id.orderGapUnitSpinner);
+
+        updateSavesSpinner();
+        savesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (isUpdatingUI) return;
+                String selected = (String) parent.getItemAtPosition(position);
+                if (!selected.equals(VirtualControllerConfigurationLoader.getCurrentProfileName(ConfigureVirtualControllerActivity.this))) {
+                    VirtualControllerConfigurationLoader.setCurrentProfileName(ConfigureVirtualControllerActivity.this, selected);
+                    virtualController.refreshLayout();
+                }
+                removeSaveButton.setVisibility(selected.equals("Default") ? View.GONE : View.VISIBLE);
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        importSaveButton.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            String[] mimetypes = {"application/json", "text/plain"};
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes);
+            startActivityForResult(intent, REQUEST_IMPORT);
+        });
+
+        exportSaveButton.setOnClickListener(v -> {
+            String current = VirtualControllerConfigurationLoader.getCurrentProfileName(this);
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/json");
+            intent.putExtra(Intent.EXTRA_TITLE, "Moonlight_" + current + ".json");
+            startActivityForResult(intent, REQUEST_EXPORT);
+        });
+
+        removeSaveButton.setOnClickListener(v -> {
+            String current = VirtualControllerConfigurationLoader.getCurrentProfileName(this);
+            if (current.equals("Default")) return;
+
+            new AlertDialog.Builder(this)
+                .setTitle("Remove Save")
+                .setMessage("Are you sure you want to delete profile '" + current + "'?")
+                .setPositiveButton(R.string.yes, (dialog, which) -> {
+                    VirtualControllerConfigurationLoader.deleteProfile(this, current);
+                    virtualController.refreshLayout();
+                    updateSavesSpinner();
+                    Toast.makeText(this, "Profile '" + current + "' removed", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.no, null)
+                .show();
+        });
 
         mappingModeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, MODES));
         shapeSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, SHAPES));
@@ -528,6 +605,23 @@ public class ConfigureVirtualControllerActivity extends Activity {
             VirtualControllerElement selected = virtualController.getSelectedElement();
             if (selected != null) {
                 selected.setTouchThrough(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        avoidConflictCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setAvoidTouchThroughConflict(isChecked);
+            }
+        });
+
+        exclusiveTouchCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setExclusiveTouch(isChecked);
             }
         });
 
@@ -688,6 +782,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
 
         toggleModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
         touchThroughCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        avoidConflictCheckbox.setVisibility(!isStick && selected.isTouchThrough() ? View.VISIBLE : View.GONE);
+        exclusiveTouchCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
         
         // Repeat mode should be available for all buttons (repeating while held)
         // or for toggle buttons (repeating while toggled).
@@ -750,6 +846,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         shapeSpinner.setSelection(element.getShape().ordinal());
         toggleModeCheckbox.setChecked(element.isToggleMode());
         touchThroughCheckbox.setChecked(element.isTouchThrough());
+        avoidConflictCheckbox.setChecked(element.isAvoidTouchThroughConflict());
+        exclusiveTouchCheckbox.setChecked(element.isExclusiveTouch());
         orderingCheckbox.setChecked(element.isOrderingMode());
         applyOnHoldCheckbox.setChecked(element.isApplyOnHold());
         holdRepeatCheckbox.setChecked(element.isHoldRepeat());
@@ -1086,5 +1184,80 @@ public class ConfigureVirtualControllerActivity extends Activity {
             if (orderGapUnitSpinner.getSelectedItemPosition() == 1) val *= 1000;
             selected.setOrderGapTime(val);
         } catch (Exception e) {}
+    }
+
+    private void updateSavesSpinner() {
+        isUpdatingUI = true;
+        java.util.List<String> profiles = VirtualControllerConfigurationLoader.getProfileList(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, profiles);
+        savesSpinner.setAdapter(adapter);
+        String current = VirtualControllerConfigurationLoader.getCurrentProfileName(this);
+        int pos = profiles.indexOf(current);
+        if (pos >= 0) savesSpinner.setSelection(pos);
+        removeSaveButton.setVisibility(current.equals("Default") ? View.GONE : View.VISIBLE);
+        isUpdatingUI = false;
+    }
+
+    private void handleIntent(Intent intent) {
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            android.net.Uri uri = intent.getData();
+            if (uri != null) {
+                importProfileFromUri(uri);
+            }
+        }
+    }
+
+    private void importProfileFromUri(android.net.Uri uri) {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("Imported_Profile");
+
+        new AlertDialog.Builder(this)
+            .setTitle(R.string.import_profile_dialog_title)
+            .setMessage(R.string.enter_import_name)
+            .setView(input)
+            .setPositiveButton(R.string.import_button, (dialog, which) -> {
+                String name = input.getText().toString();
+                if (name.isEmpty()) name = "Imported";
+
+                try (java.io.InputStream is = getContentResolver().openInputStream(uri)) {
+                    java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+                    String json = s.hasNext() ? s.next() : "";
+                    if (VirtualControllerConfigurationLoader.importProfileFromJson(this, name, json)) {
+                        VirtualControllerConfigurationLoader.setCurrentProfileName(this, name);
+                        virtualController.refreshLayout();
+                        updateSavesSpinner();
+                        Toast.makeText(this, String.format(getString(R.string.profile_imported_toast), name), Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, R.string.invalid_profile_toast, Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(this, R.string.import_failed_toast, Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) return;
+
+        android.net.Uri uri = data.getData();
+        if (requestCode == REQUEST_EXPORT) {
+            String current = VirtualControllerConfigurationLoader.getCurrentProfileName(this);
+            String json = VirtualControllerConfigurationLoader.exportProfileToJson(this, current);
+            try (android.os.ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(uri, "w");
+                 java.io.FileOutputStream fos = new java.io.FileOutputStream(pfd.getFileDescriptor())) {
+                fos.write(json.getBytes());
+                Toast.makeText(this, R.string.profile_exported_toast, Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, R.string.export_failed_toast, Toast.LENGTH_SHORT).show();
+            }
+        } else if (requestCode == REQUEST_IMPORT) {
+            importProfileFromUri(uri);
+        }
     }
 }

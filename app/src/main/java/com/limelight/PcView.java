@@ -1,5 +1,7 @@
 package com.limelight;
 
+import com.mooncake.R;
+
 import android.app.AlertDialog;
 import java.io.FileNotFoundException;
 import java.io.IOException;

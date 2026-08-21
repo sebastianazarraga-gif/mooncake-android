@@ -9,7 +9,7 @@ import android.widget.TextView;
 
 import com.limelight.AppView;
 import com.limelight.LimeLog;
-import com.limelight.R;
+import com.mooncake.R;
 import com.limelight.grid.assets.CachedAppAssetLoader;
 import com.limelight.grid.assets.DiskAssetLoader;
 import com.limelight.grid.assets.MemoryAssetLoader;

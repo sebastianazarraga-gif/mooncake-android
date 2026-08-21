@@ -116,6 +116,8 @@ public abstract class VirtualControllerElement extends View {
     protected boolean _isHoldRepeat = false;
     protected long _holdRepeatDelay = 1000;
     protected long _holdActivationTime = 100;
+    protected boolean _isExclusiveTouch = false;
+    protected boolean _avoidTouchThroughConflict = false;
     protected String _customText = null;
 
     float position_pressed_x = 0;
@@ -636,6 +638,22 @@ public abstract class VirtualControllerElement extends View {
         return _holdActivationTime;
     }
 
+    public void setExclusiveTouch(boolean exclusive) {
+        _isExclusiveTouch = exclusive;
+    }
+
+    public boolean isExclusiveTouch() {
+        return _isExclusiveTouch;
+    }
+
+    public void setAvoidTouchThroughConflict(boolean avoid) {
+        _avoidTouchThroughConflict = avoid;
+    }
+
+    public boolean isAvoidTouchThroughConflict() {
+        return _avoidTouchThroughConflict;
+    }
+
     public void setTouchThrough(boolean touchThrough) {
         _isTouchThrough = touchThrough;
     }
@@ -716,6 +734,8 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("HOLD_REP", _isHoldRepeat);
         configuration.put("HOLD_DLY", _holdRepeatDelay);
         configuration.put("HOLD_ACT", _holdActivationTime);
+        configuration.put("EXCLUSIVE", _isExclusiveTouch);
+        configuration.put("AVOID_CONFLICT", _avoidTouchThroughConflict);
         configuration.put("TOGGLED", _isToggled);
         if (_customText != null) configuration.put("TXT", _customText);
 
@@ -833,6 +853,8 @@ public abstract class VirtualControllerElement extends View {
         _isHoldRepeat = configuration.optBoolean("HOLD_REP", false);
         _holdRepeatDelay = configuration.optLong("HOLD_DLY", 1000);
         _holdActivationTime = configuration.optLong("HOLD_ACT", 100);
+        _isExclusiveTouch = configuration.optBoolean("EXCLUSIVE", false);
+        _avoidTouchThroughConflict = configuration.optBoolean("AVOID_CONFLICT", false);
         _isToggled = configuration.optBoolean("TOGGLED", false);
         
         if (configuration.has("TXT") && !configuration.isNull("TXT")) {

@@ -1,5 +1,7 @@
 package com.limelight;
 
+import com.mooncake.R;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashSet;

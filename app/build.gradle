@@ -5,14 +5,14 @@ android {
 
     compileSdk 34
 
-    namespace 'com.limelight'
+    namespace 'com.mooncake'
 
     defaultConfig {
         minSdk 21
         targetSdk 34
 
-        versionName "1.0.3"
-        versionCode = 3
+        versionName "1.0.5"
+        versionCode = 5
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
         ndk.debugSymbolLevel = 'FULL'

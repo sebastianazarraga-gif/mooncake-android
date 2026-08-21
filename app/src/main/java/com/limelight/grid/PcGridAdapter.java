@@ -7,7 +7,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.limelight.PcView;
-import com.limelight.R;
+import com.mooncake.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.preferences.PreferenceConfiguration;

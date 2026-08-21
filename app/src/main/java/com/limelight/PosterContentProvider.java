@@ -1,5 +1,7 @@
 package com.limelight;
 
+import com.mooncake.BuildConfig;
+
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;

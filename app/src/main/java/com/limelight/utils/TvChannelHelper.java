@@ -18,7 +18,7 @@ import android.os.Build;
 
 import com.limelight.LimeLog;
 import com.limelight.PosterContentProvider;
-import com.limelight.R;
+import com.mooncake.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
 

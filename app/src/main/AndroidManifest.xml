@@ -57,7 +57,7 @@
         android:theme="@style/AppTheme">
 
         <provider
-            android:name=".PosterContentProvider"
+            android:name="com.limelight.PosterContentProvider"
             android:authorities="poster.${applicationId}"
             android:enabled="true"
             android:exported="true">
@@ -86,7 +86,7 @@
              in each activity even though it is implied by targeting API 24+ -->
 
         <activity
-            android:name=".PcView"
+            android:name="com.limelight.PcView"
             android:exported="true"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
@@ -106,7 +106,7 @@
         </activity>
         <!-- Small hack to support launcher shortcuts without relaunching over and over again when the back button is pressed -->
         <activity
-            android:name=".ShortcutTrampoline"
+            android:name="com.limelight.ShortcutTrampoline"
             android:noHistory="true"
             android:exported="true"
             android:resizeableActivity="true"
@@ -116,7 +116,7 @@
             <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
         </activity>
         <activity
-            android:name=".AppView"
+            android:name="com.limelight.AppView"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
@@ -124,7 +124,7 @@
             <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
         </activity>
         <activity
-            android:name=".preferences.StreamSettings"
+            android:name="com.limelight.preferences.StreamSettings"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
@@ -133,7 +133,7 @@
             <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
         </activity>
         <activity
-            android:name=".preferences.AddComputerManually"
+            android:name="com.limelight.preferences.AddComputerManually"
             android:resizeableActivity="true"
             android:windowSoftInputMode="stateVisible"
             android:enableOnBackInvokedCallback="true"
@@ -143,7 +143,7 @@
             <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
         </activity>
         <activity
-            android:name=".Game"
+            android:name="com.limelight.Game"
             android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
             android:noHistory="true"
             android:supportsPictureInPicture="true"
@@ -168,17 +168,17 @@
         </activity>
 
         <service
-            android:name=".discovery.DiscoveryService"
+            android:name="com.limelight.discovery.DiscoveryService"
             android:label="mDNS PC Auto-Discovery Service" />
         <service
-            android:name=".computers.ComputerManagerService"
+            android:name="com.limelight.computers.ComputerManagerService"
             android:label="Computer Management Service" />
         <service
-            android:name=".binding.input.driver.UsbDriverService"
+            android:name="com.limelight.binding.input.driver.UsbDriverService"
             android:label="Usb Driver Service" />
 
         <activity
-            android:name=".HelpActivity"
+            android:name="com.limelight.HelpActivity"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
@@ -187,7 +187,7 @@
         </activity>
 
         <activity
-            android:name=".ControllerMappingActivity"
+            android:name="com.limelight.ControllerMappingActivity"
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="mcc|mnc|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
@@ -197,12 +197,33 @@
         </activity>
 
         <activity
-            android:name=".ConfigureVirtualControllerActivity"
+            android:name="com.limelight.ConfigureVirtualControllerActivity"
             android:screenOrientation="landscape"
+            android:exported="true"
             android:configChanges="orientation|screenSize|layoutDirection"
             android:label="Virtual Controller Editor">
             <meta-data android:name="WindowManagerPreference:FreeformWindowSize" android:value="system-default" />
             <meta-data android:name="WindowManagerPreference:FreeformWindowOrientation" android:value="landscape" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.json" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
         </activity>
     </application>
 

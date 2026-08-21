@@ -8,7 +8,7 @@ import android.preference.DialogPreference;
 import android.util.AttributeSet;
 import android.widget.Toast;
 
-import com.limelight.R;
+import com.mooncake.R;
 
 import static com.limelight.binding.input.virtual_controller.VirtualControllerConfigurationLoader.OSC_PREFERENCE;
 

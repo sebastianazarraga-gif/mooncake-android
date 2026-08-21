@@ -14,7 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import com.limelight.binding.PlatformBinding;
 import com.limelight.computers.ComputerManagerService;
-import com.limelight.R;
+import com.mooncake.R;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.jni.MoonBridge;

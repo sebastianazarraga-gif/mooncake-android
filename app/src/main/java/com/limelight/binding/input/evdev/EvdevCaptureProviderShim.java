@@ -3,7 +3,7 @@ package com.limelight.binding.input.evdev;
 
 import android.app.Activity;
 
-import com.limelight.BuildConfig;
+import com.mooncake.BuildConfig;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 
 public class EvdevCaptureProviderShim {

@@ -312,6 +312,23 @@
     <string name="analogscroll_left">Left analog stick</string>
     <string name="repeating">Repeating</string>
 
+    <string name="saves_title">Saves</string>
+    <string name="remove_save_button">Remove Save</string>
+    <string name="mapping_profiles_title">Mapping Profiles</string>
+    <string name="save_profile_dialog_title">Save Profile</string>
+    <string name="enter_profile_name">Enter profile name:</string>
+    <string name="save_button">Save</string>
+    <string name="profile_saved_toast">Profile \'%s\' saved</string>
+    <string name="import_button">Import</string>
+    <string name="export_button">Export</string>
+    <string name="import_profile_dialog_title">Import Profile</string>
+    <string name="enter_import_name">Enter name for imported profile:</string>
+    <string name="profile_exported_toast">Profile exported</string>
+    <string name="export_failed_toast">Export failed</string>
+    <string name="profile_imported_toast">Profile \'%s\' imported</string>
+    <string name="import_failed_toast">Import failed</string>
+    <string name="invalid_profile_toast">Invalid profile file</string>
+
     <string-array name="time_units">
         <item>ms</item>
         <item>s</item>
