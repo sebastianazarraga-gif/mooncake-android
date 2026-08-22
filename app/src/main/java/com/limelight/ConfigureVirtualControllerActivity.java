@@ -39,12 +39,12 @@ public class ConfigureVirtualControllerActivity extends Activity {
     private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer, repeatContainer, activationContainer, orderingContainer, orderSettingsContainer, holdRepeatContainer, holdRepeatSettings;
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
-    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner;
+    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner;
     private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider;
     private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText;
     private LinearLayout directionalBindings;
     private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton, removeSaveButton, importSaveButton, exportSaveButton;
-    private android.widget.CheckBox toggleModeCheckbox, touchThroughCheckbox, avoidConflictCheckbox, exclusiveTouchCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox;
+    private android.widget.CheckBox toggleModeCheckbox, shiftModeCheckbox, touchThroughCheckbox, avoidConflictCheckbox, exclusiveTouchCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox;
     private android.widget.EditText repeatIntervalEdit, activationTimeEdit, orderActivationEdit, orderGapEdit, holdRepeatDelayEdit, holdActivationEdit;
     private boolean isUpdatingUI = false;
 
@@ -76,13 +76,25 @@ public class ConfigureVirtualControllerActivity extends Activity {
         "None", "Space", "Enter", "Escape", "Backspace", "Tab", "Shift", "Ctrl", "Alt",
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
         "Up", "Down", "Left", "Right", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"
+        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+        "Del", "PrtSc", "Caps Lock", "Ins", "Home", "End", "PgUp", "PgDn",
+        "Semicolon ;", "Equal =", "Comma ,", "Minus -", "Period .", "Slash /", "Grave `",
+        "Left Bracket [", "Backslash \\", "Right Bracket ]", "Apostrophe '",
+        "Num Lock", "Scroll Lock", "Pause",
+        "Numpad 0", "Numpad 1", "Numpad 2", "Numpad 3", "Numpad 4", "Numpad 5", "Numpad 6", "Numpad 7", "Numpad 8", "Numpad 9",
+        "Numpad *", "Numpad +", "Numpad -", "Numpad .", "Numpad /"
     };
     private final short[] KEY_CODES = {
         0, 0x20, 0x0D, 0x1B, 0x08, 0x09, 0xA0, 0xA2, 0xA4,
         0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A,
         0x26, 0x28, 0x25, 0x27, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
-        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C
+        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C,
+        0x2E, 0x2C, 0x14, 0x2D, 0x24, 0x23, 0x21, 0x22,
+        0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0,
+        0xDB, 0xDC, 0xDD, 0xDE,
+        0x90, 0x91, 0x13,
+        0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69,
+        0x6A, 0x6B, 0x6D, 0x6E, 0x6F
     };
 
     private final String[] MOUSE_ACTIONS = {
@@ -144,8 +156,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
                     .setTitle(R.string.dialog_title_reset_osc)
                     .setMessage(R.string.dialog_text_reset_osc)
                     .setPositiveButton(R.string.yes, (dialog, which) -> {
-                        getSharedPreferences(VirtualControllerConfigurationLoader.OSC_PREFERENCE, MODE_PRIVATE).edit().clear().apply();
-                        virtualController.refreshLayout();
+                        virtualController.resetToDefaults();
                         sidePanel.setVisibility(View.GONE);
                     })
                     .setNegativeButton(R.string.no, null)
@@ -236,6 +247,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         removeSaveButton = findViewById(R.id.removeSaveButton);
         importSaveButton = findViewById(R.id.importSaveButton);
         exportSaveButton = findViewById(R.id.exportSaveButton);
+        useOnAppSpinner = findViewById(R.id.useOnAppSpinner);
         directionalBindings = findViewById(R.id.directionalBindings);
         shapeSpinner = findViewById(R.id.shapeSpinner);
         opacitySlider = findViewById(R.id.opacitySlider);
@@ -263,6 +275,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         
         setCustomTextButton = findViewById(R.id.setCustomTextButton);
         toggleModeCheckbox = findViewById(R.id.toggleModeCheckbox);
+        shiftModeCheckbox = findViewById(R.id.shiftModeCheckbox);
         touchThroughCheckbox = findViewById(R.id.touchThroughCheckbox);
         avoidConflictCheckbox = findViewById(R.id.avoidConflictCheckbox);
         exclusiveTouchCheckbox = findViewById(R.id.exclusiveTouchCheckbox);
@@ -293,6 +306,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         orderGapUnitSpinner = findViewById(R.id.orderGapUnitSpinner);
 
         updateSavesSpinner();
+        updateAppsSpinner();
+        
         savesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -301,8 +316,20 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 if (!selected.equals(VirtualControllerConfigurationLoader.getCurrentProfileName(ConfigureVirtualControllerActivity.this))) {
                     VirtualControllerConfigurationLoader.setCurrentProfileName(ConfigureVirtualControllerActivity.this, selected);
                     virtualController.refreshLayout();
+                    updateAppsSpinner();
                 }
                 removeSaveButton.setVisibility(selected.equals("Default") ? View.GONE : View.VISIBLE);
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        useOnAppSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (isUpdatingUI) return;
+                String appName = (String) parent.getItemAtPosition(position);
+                String profile = VirtualControllerConfigurationLoader.getCurrentProfileName(ConfigureVirtualControllerActivity.this);
+                VirtualControllerConfigurationLoader.setAssociatedAppForProfile(ConfigureVirtualControllerActivity.this, profile, appName);
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -600,6 +627,14 @@ public class ConfigureVirtualControllerActivity extends Activity {
             }
         });
 
+        shiftModeCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setShiftMode(isChecked);
+            }
+        });
+
         touchThroughCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isUpdatingUI) return;
             VirtualControllerElement selected = virtualController.getSelectedElement();
@@ -781,6 +816,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         msContainer.setVisibility(!isStick && (mode == 2 || mode == 3) ? View.VISIBLE : View.GONE);
 
         toggleModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        shiftModeCheckbox.setVisibility(!isStick && (mode == 1 || mode == 3) ? View.VISIBLE : View.GONE);
         touchThroughCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
         avoidConflictCheckbox.setVisibility(!isStick && selected.isTouchThrough() ? View.VISIBLE : View.GONE);
         exclusiveTouchCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
@@ -845,6 +881,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
 
         shapeSpinner.setSelection(element.getShape().ordinal());
         toggleModeCheckbox.setChecked(element.isToggleMode());
+        shiftModeCheckbox.setChecked(element.isShiftMode());
         touchThroughCheckbox.setChecked(element.isTouchThrough());
         avoidConflictCheckbox.setChecked(element.isAvoidTouchThroughConflict());
         exclusiveTouchCheckbox.setChecked(element.isExclusiveTouch());
@@ -1195,6 +1232,43 @@ public class ConfigureVirtualControllerActivity extends Activity {
         int pos = profiles.indexOf(current);
         if (pos >= 0) savesSpinner.setSelection(pos);
         removeSaveButton.setVisibility(current.equals("Default") ? View.GONE : View.VISIBLE);
+        isUpdatingUI = false;
+    }
+
+    private void updateAppsSpinner() {
+        isUpdatingUI = true;
+        java.util.List<String> appNames = new java.util.ArrayList<>();
+        appNames.add("None");
+        
+        java.io.File appListDir = new java.io.File(getCacheDir(), "applist");
+        if (appListDir.exists() && appListDir.isDirectory()) {
+            java.io.File[] files = appListDir.listFiles();
+            if (files != null) {
+                java.util.Set<String> uniqueApps = new java.util.HashSet<>();
+                for (java.io.File file : files) {
+                    try (java.io.InputStream is = new java.io.FileInputStream(file)) {
+                        String xml = com.limelight.utils.CacheHelper.readInputStreamToString(is);
+                        java.util.List<com.limelight.nvstream.http.NvApp> apps = com.limelight.nvstream.http.NvHTTP.getAppListByReader(new java.io.StringReader(xml));
+                        for (com.limelight.nvstream.http.NvApp app : apps) {
+                            uniqueApps.add(app.getAppName());
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                java.util.List<String> sortedApps = new java.util.ArrayList<>(uniqueApps);
+                java.util.Collections.sort(sortedApps);
+                appNames.addAll(sortedApps);
+            }
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, appNames);
+        useOnAppSpinner.setAdapter(adapter);
+        
+        String currentProfile = VirtualControllerConfigurationLoader.getCurrentProfileName(this);
+        String associatedApp = VirtualControllerConfigurationLoader.getAssociatedAppForProfile(this, currentProfile);
+        int pos = appNames.indexOf(associatedApp);
+        if (pos >= 0) useOnAppSpinner.setSelection(pos);
         isUpdatingUI = false;
     }
 

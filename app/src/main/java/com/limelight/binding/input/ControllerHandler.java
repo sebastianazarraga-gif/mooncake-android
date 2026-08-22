@@ -2915,10 +2915,14 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     }
 
     public void reportVirtualKeyboardInput(short keyMap, boolean down) {
+        reportVirtualKeyboardInput(keyMap, down, (byte) 0);
+    }
+
+    public void reportVirtualKeyboardInput(short keyMap, boolean down, byte modifiers) {
         if (conn != null) {
             conn.sendKeyboardInput(keyMap,
                     down ? KeyboardPacket.KEY_DOWN : KeyboardPacket.KEY_UP,
-                    (byte) 0, (byte) 0);
+                    modifiers, (byte) 0);
         }
     }
 

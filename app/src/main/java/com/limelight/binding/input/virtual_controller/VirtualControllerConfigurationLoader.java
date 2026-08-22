@@ -26,6 +26,7 @@ public class VirtualControllerConfigurationLoader {
     public static final String OSC_PREFERENCE = "OSC";
     public static final String PROFILES_LIST_KEY = "PROFILES_LIST";
     public static final String CURRENT_PROFILE_KEY = "CURRENT_PROFILE";
+    public static final String APP_ASSOCIATION_KEY = "APP_ASSOCIATION_";
 
     public static String getPrefName(String profileName) {
         if (profileName == null || profileName.isEmpty() || profileName.equals("Default")) {
@@ -56,6 +57,29 @@ public class VirtualControllerConfigurationLoader {
 
     public static void setCurrentProfileName(Context context, String name) {
         context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).edit().putString(CURRENT_PROFILE_KEY, name).apply();
+    }
+
+    public static String getAssociatedAppForProfile(Context context, String profileName) {
+        return context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).getString(APP_ASSOCIATION_KEY + profileName, "None");
+    }
+
+    public static void setAssociatedAppForProfile(Context context, String profileName, String appName) {
+        context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE).edit().putString(APP_ASSOCIATION_KEY + profileName, appName).apply();
+    }
+
+    public static String getProfileForApp(Context context, String appName) {
+        if (appName == null || appName.isEmpty()) return "Default";
+        SharedPreferences pref = context.getSharedPreferences(OSC_PREFERENCE, Context.MODE_PRIVATE);
+        Set<String> profiles = pref.getStringSet(PROFILES_LIST_KEY, new HashSet<>());
+        for (String profile : profiles) {
+            if (appName.equals(pref.getString(APP_ASSOCIATION_KEY + profile, ""))) {
+                return profile;
+            }
+        }
+        if (appName.equals(pref.getString(APP_ASSOCIATION_KEY + "Default", ""))) {
+            return "Default";
+        }
+        return "Default";
     }
 
     public static void deleteProfile(Context context, String profileName) {

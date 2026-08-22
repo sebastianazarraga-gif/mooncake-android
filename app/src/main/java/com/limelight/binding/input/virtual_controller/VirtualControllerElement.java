@@ -106,6 +106,7 @@ public abstract class VirtualControllerElement extends View {
     protected boolean _isToggleMode = false;
     protected boolean _isTouchThrough = false;
     protected boolean _isToggled = false;
+    protected boolean _isShiftMode = false;
     protected boolean _isRepeatMode = false;
     protected long _repeatInterval = 1000;
     protected long _activationTime = 100;
@@ -554,6 +555,14 @@ public abstract class VirtualControllerElement extends View {
         _isToggleMode = toggleMode;
     }
 
+    public void setShiftMode(boolean shiftMode) {
+        _isShiftMode = shiftMode;
+    }
+
+    public boolean isShiftMode() {
+        return _isShiftMode;
+    }
+
     public boolean isToggleMode() {
         return _isToggleMode;
     }
@@ -723,6 +732,7 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("COLOR", _customColor);
         configuration.put("ROT", _rotation);
         configuration.put("TOGGLE", _isToggleMode);
+        configuration.put("SHIFT", _isShiftMode);
         configuration.put("TOUCH_THROUGH", _isTouchThrough);
         configuration.put("REPEAT", _isRepeatMode);
         configuration.put("INTERVAL", _repeatInterval);
@@ -842,6 +852,7 @@ public abstract class VirtualControllerElement extends View {
         _customColor = configuration.optInt("COLOR", 0);
         _rotation = (float) configuration.optDouble("ROT", 0);
         _isToggleMode = configuration.optBoolean("TOGGLE", false);
+        _isShiftMode = configuration.optBoolean("SHIFT", false);
         _isTouchThrough = configuration.optBoolean("TOUCH_THROUGH", false);
         _isRepeatMode = configuration.optBoolean("REPEAT", false);
         _repeatInterval = configuration.optLong("INTERVAL", 1000);

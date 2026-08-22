@@ -239,6 +239,14 @@ public class VirtualController {
     }
 
     public void refreshLayout() {
+        refreshLayout(true);
+    }
+
+    public void resetToDefaults() {
+        refreshLayout(false);
+    }
+
+    private void refreshLayout(boolean loadFromPrefs) {
         frame_layout.post(new Runnable() {
             @Override
             public void run() {
@@ -262,9 +270,11 @@ public class VirtualController {
                 VirtualControllerConfigurationLoader.createDefaultLayout(
                         VirtualController.this, context);
 
-                // Apply saved positions
-                VirtualControllerConfigurationLoader.loadFromPreferences(
-                        VirtualController.this, context);
+                if (loadFromPrefs) {
+                    // Apply saved positions
+                    VirtualControllerConfigurationLoader.loadFromPreferences(
+                            VirtualController.this, context);
+                }
 
                 if (isVisible) {
                     show();

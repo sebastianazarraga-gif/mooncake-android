@@ -193,7 +193,10 @@ public class DigitalButton extends VirtualControllerElement {
         ControllerHandler ch = virtualController.getControllerHandler();
         if (ch == null) return;
         switch (action.type) {
-            case KBD: ch.reportVirtualKeyboardInput((Short)action.value, active); break;
+            case KBD:
+                byte mods = (byte) (_isShiftMode ? 0x02 : 0);
+                ch.reportVirtualKeyboardInput((Short)action.value, active, mods);
+                break;
             case GP: applyGpFlagInternal(ch, (Integer)action.value, active); break;
             case MS: applyMouseAction(ch, (MouseAction)action.value, active); break;
         }
@@ -337,12 +340,13 @@ public class DigitalButton extends VirtualControllerElement {
         ControllerHandler ch = virtualController.getControllerHandler();
         if (ch == null) return;
         if (isKeyboardMapping() || isCombinedMapping()) {
+            byte mods = (byte) (_isShiftMode ? 0x02 : 0);
             if (active) {
-                if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, true);
-                for (Short code : _extraKeyCodes) if (code != 0) ch.reportVirtualKeyboardInput(code, true);
+                if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, true, mods);
+                for (Short code : _extraKeyCodes) if (code != 0) ch.reportVirtualKeyboardInput(code, true, mods);
             } else {
-                for (int i = _extraKeyCodes.size() - 1; i >= 0; i--) { short code = _extraKeyCodes.get(i); if (code != 0) ch.reportVirtualKeyboardInput(code, false); }
-                if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false);
+                for (int i = _extraKeyCodes.size() - 1; i >= 0; i--) { short code = _extraKeyCodes.get(i); if (code != 0) ch.reportVirtualKeyboardInput(code, false, mods); }
+                if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false, mods);
             }
         }
         if (isMouseMapping() || isCombinedMapping()) {
@@ -404,13 +408,14 @@ public class DigitalButton extends VirtualControllerElement {
         if (ch != null) {
             VirtualController.ControllerInputContext inputContext = virtualController.getControllerInputContext();
             List<BindingAction> allActions = getAllActions();
+            byte mods = (byte) (_isShiftMode ? 0x02 : 0);
             for (BindingAction action : allActions) {
-                if (action.type == BindingAction.Type.KBD) ch.reportVirtualKeyboardInput((Short)action.value, false);
+                if (action.type == BindingAction.Type.KBD) ch.reportVirtualKeyboardInput((Short)action.value, false, mods);
                 else if (action.type == BindingAction.Type.GP) inputContext.inputMap &= ~(Integer)action.value;
                 else if (action.type == BindingAction.Type.MS) applyMouseAction(ch, (MouseAction)action.value, false);
             }
-            if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false);
-            for (Short code : _extraKeyCodes) if (code != 0) ch.reportVirtualKeyboardInput(code, false);
+            if (_mappedKeyCode != 0) ch.reportVirtualKeyboardInput(_mappedKeyCode, false, mods);
+            for (Short code : _extraKeyCodes) if (code != 0) ch.reportVirtualKeyboardInput(code, false, mods);
             applyMouseAction(ch, _mouseAction, false);
             for (MouseAction action : _extraMouseActions) applyMouseAction(ch, action, false);
             inputContext.inputMap &= ~_gamepadFlag;

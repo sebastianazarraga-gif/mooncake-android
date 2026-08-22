@@ -138,6 +138,19 @@
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Use this profile on"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp" />
+                <Spinner
+                    android:id="@+id/useOnAppSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginBottom="16dp"
+                    android:backgroundTint="#FFFFFF" />
+
                 <LinearLayout
                     android:id="@+id/propertiesContainer"
                     android:layout_width="match_parent"
@@ -485,6 +498,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Toggle Mode"
+                        android:textColor="#AAAAAA"
+                        android:layout_marginBottom="8dp"
+                        android:visibility="gone" />
+
+                    <CheckBox
+                        android:id="@+id/shiftModeCheckbox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Caps Lock Mode"
                         android:textColor="#AAAAAA"
                         android:layout_marginBottom="8dp"
                         android:visibility="gone" />
