@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/main_background_gradient"
+    tools:context=".AppView" >
+
+    <RelativeLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="70dp"
+        android:layout_height="match_parent"
+        android:background="@color/black_purple"
+        android:elevation="4dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true">
+
+        <TextView
+            android:id="@+id/appListText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:rotation="-90"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:singleLine="true" />
+    </RelativeLayout>
+
+    <FrameLayout
+        android:id="@+id/appFragmentContainer"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
+        android:layout_toEndOf="@id/headerLayout"
+        android:layout_toRightOf="@id/headerLayout"
+        android:layout_above="@+id/bottom_nav_bar"
+        android:gravity="center" />
+
+    <include layout="@layout/bottom_nav_layout" />
+
+</RelativeLayout>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The root element is 'selector' -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Item for when the button is ON/Activated -->
+    <item android:drawable="@drawable/ic_list" android:state_activated="true" />
+
+    <!-- Item for the default state (OFF/Grid) -->
+    <item android:drawable="@drawable/ic_grid" />
+
+</selector>

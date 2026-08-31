@@ -1,0 +1,6 @@
+- [x] Move `pc_grid_item.xml` and `pc_grid_view.xml` to `res/layout/`
+- [x] Create `pc_list_view.xml` and `pc_list_item.xml`
+- [x] Add `androidx.cardview` dependency
+- [x] Update `PcGridAdapter.java` to use `R.layout` and populate list views
+- [x] Update `PcView.java` with toggle logic
+- [x] Verify build and functionality
