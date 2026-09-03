@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/main_background_gradient"
+    tools:context=".preferences.AddComputerManually" >
+
+    <RelativeLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="70dp"
+        android:layout_height="match_parent"
+        android:background="@color/black_purple"
+        android:elevation="4dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true">
+
+ 
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@id/headerLayout"
+        android:layout_toRightOf="@id/headerLayout"
+        android:layout_centerVertical="true"
+        android:orientation="vertical"
+        android:padding="40dp">
+
+        <EditText
+            android:id="@+id/hostTextView"
+            android:layout_width="400dp"
+            android:layout_height="50dp"
+            android:layout_gravity="center_horizontal"
+            android:ems="10"
+            android:singleLine="true"
+            android:preferKeepClear="true"
+            android:inputType="textNoSuggestions"
+            android:hint="@string/ip_hint"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#80FFFFFF"
+            android:background="@drawable/addpctextbox"
+            android:gravity="center">
+            <requestFocus />
+        </EditText>
+
+        <Button
+            android:id="@+id/addPcButton"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/addpcbuttonrounded"
+            android:backgroundTint="@color/purple_accent"
+            android:text="@android:string/ok"
+            android:textColor="#000000" />
+    </LinearLayout>
+
+    <include layout="@layout/bottom_nav_layout" />
+
+</RelativeLayout>

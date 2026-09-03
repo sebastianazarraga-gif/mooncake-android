@@ -1,0 +1,193 @@
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Game" >
+
+    <!-- Main streaming content -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <View
+            android:id="@+id/backgroundTouchView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.limelight.ui.StreamView
+            android:id="@+id/surfaceView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:focusedByDefault="true"
+            android:defaultFocusHighlightEnabled="false">
+            <requestFocus />
+        </com.limelight.ui.StreamView>
+
+        <TextView
+            android:id="@+id/performanceOverlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:layout_gravity="left"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:gravity="left"
+            android:background="#80000000"
+            android:preferKeepClear="true"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/notificationOverlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginTop="10dp"
+            android:layout_gravity="right"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:gravity="right"
+            android:background="#80000000"
+            android:preferKeepClear="true"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Swipeable side panel -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/streamingSidePanel"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="#F2000000"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
+
+            <ImageView
+                android:id="@+id/sidePanelBanner"
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ouya_icon" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="General Settings"
+                android:textColor="#BB86FC"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:padding="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/mapping_profiles_title"
+                android:textColor="#BB86FC"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:padding="16dp" />
+
+            <Spinner
+                android:id="@+id/savesSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginBottom="12dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="#FFFFFF" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SETTINGS MAY NOT APPLY
+RESTART IF SO"
+                android:textColor="#7ABB86FC"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:padding="16dp" />
+
+
+            <!-- Section: Overlay & HUD -->
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Overlay &amp; HUD" android:textColor="#88FFFFFF" android:textSize="12sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:textStyle="bold" />
+            <CheckBox android:id="@+id/sidePanelPerfOverlay" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Performance Stats" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelOscToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="On-screen Controls" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelOnlyL3R3" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Only L3 and R3" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelGuideButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Show Guide Button" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+
+            <!-- Section: Video -->
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Video Settings" android:textColor="#88FFFFFF" android:textSize="12sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:textStyle="bold" android:layout_marginTop="16dp" />
+            <CheckBox android:id="@+id/sidePanelStretchToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Stretch to Full-screen" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelHdrToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Enable HDR" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelFullRange" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Force Full Range" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Video Bitrate" android:textColor="#BB86FC" android:textSize="14sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:layout_marginTop="8dp" />
+            <SeekBar android:id="@+id/sidePanelBitrateSeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:padding="16dp" />
+            <TextView android:id="@+id/sidePanelBitrateText" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="12sp" android:gravity="center" android:text="0 Mbps" />
+
+            <!-- Section: Controls -->
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Control Settings" android:textColor="#88FFFFFF" android:textSize="12sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:textStyle="bold" android:layout_marginTop="16dp" />
+            <CheckBox android:id="@+id/sidePanelTrackpadToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Trackpad Mode" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelMouseEmuToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mouse Emulation" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelAbsoluteMouse" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Absolute Mouse Mode" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelMouseNav" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mouse Nav Buttons" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelVibrateToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OSC Vibration" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelFlipFace" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Flip Face Buttons" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mouse Sensitivity" android:textColor="#BB86FC" android:textSize="14sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:layout_marginTop="8dp" />
+            <SeekBar android:id="@+id/sidePanelMouseSensSeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="500" android:padding="16dp" />
+            <TextView android:id="@+id/sidePanelMouseSensText" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="12sp" android:gravity="center" android:text="100%" />
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OSC Opacity" android:textColor="#BB86FC" android:textSize="14sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:layout_marginTop="8dp" />
+            <SeekBar android:id="@+id/sidePanelOscOpacitySeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:padding="16dp" />
+            <TextView android:id="@+id/sidePanelOscOpacityText" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="12sp" android:gravity="center" android:text="100%" />
+
+            <!-- Section: Advanced -->
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Advanced &amp; Hardware" android:textColor="#88FFFFFF" android:textSize="12sp" android:paddingLeft="16dp" android:paddingStart="16dp" android:textStyle="bold" android:layout_marginTop="16dp" />
+            <CheckBox android:id="@+id/sidePanelHostAudioToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Play Audio on PC" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelMultiConToggle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Multi-Controller" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelAudioFx" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Enable Audio FX" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelReduceRefresh" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reduce Refresh Rate" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelMotionSensors" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Motion Sensors" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelMotionFallback" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Motion Fallback" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+            <CheckBox android:id="@+id/sidePanelTouchpadAsMouse" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Touchpad as Mouse" android:textColor="#FFFFFF" android:padding="12dp" android:layout_marginStart="8dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#33FFFFFF"
+                android:layout_margin="16dp" />
+
+            <Button
+                android:id="@+id/sidePanelFullSettingsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="All Advanced Settings"
+                android:textColor="#FFFFFF"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="start|center_vertical"
+                android:padding="16dp" />
+
+            <Button
+                android:id="@+id/sidePanelCloseButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Close"
+                android:textColor="#FFFFFF"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="start|center_vertical"
+                android:padding="16dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.drawerlayout.widget.DrawerLayout>
