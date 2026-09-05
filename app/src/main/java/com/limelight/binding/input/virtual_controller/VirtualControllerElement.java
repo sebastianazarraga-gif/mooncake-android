@@ -120,6 +120,12 @@ public abstract class VirtualControllerElement extends View {
     protected long _holdActivationTime = 100;
     protected boolean _isExclusiveTouch = false;
     protected boolean _avoidTouchThroughConflict = false;
+    protected boolean _isDynamicReturn = false;
+    protected float _dynamicReturnSpeed = 0.5f;
+
+    protected boolean _isMouseStaticReturn = false;
+    protected int _mouseReturnType = 0; // 0 = All the time, 1 = Only when touched
+
     protected String _customText = null;
 
     protected boolean _isDynamicMode = false;
@@ -675,6 +681,38 @@ public abstract class VirtualControllerElement extends View {
         return _isTouchThrough;
     }
 
+    public void setDynamicReturn(boolean dynamicReturn) {
+        _isDynamicReturn = dynamicReturn;
+    }
+
+    public boolean isDynamicReturn() {
+        return _isDynamicReturn;
+    }
+
+    public void setDynamicReturnSpeed(float speed) {
+        _dynamicReturnSpeed = speed;
+    }
+
+    public float getDynamicReturnSpeed() {
+        return _dynamicReturnSpeed;
+    }
+
+    public void setMouseStaticReturn(boolean enabled) {
+        _isMouseStaticReturn = enabled;
+    }
+
+    public boolean isMouseStaticReturn() {
+        return _isMouseStaticReturn;
+    }
+
+    public void setMouseReturnType(int type) {
+        _mouseReturnType = type;
+    }
+
+    public int getMouseReturnType() {
+        return _mouseReturnType;
+    }
+
     public void setCustomText(String text) {
         _customText = text;
         invalidate();
@@ -783,6 +821,10 @@ public abstract class VirtualControllerElement extends View {
 
         configuration.put("DYNAMIC", _isDynamicMode);
         configuration.put("DYN_TYPE", _dynamicStickType);
+        configuration.put("DYN_RET", _isDynamicReturn);
+        configuration.put("DYN_RET_SPD", _dynamicReturnSpeed);
+        configuration.put("MS_STAT_RET", _isMouseStaticReturn);
+        configuration.put("MS_RET_TYPE", _mouseReturnType);
 
         return configuration;
     }
@@ -918,6 +960,10 @@ public abstract class VirtualControllerElement extends View {
 
         _isDynamicMode = configuration.optBoolean("DYNAMIC", false);
         _dynamicStickType = configuration.optInt("DYN_TYPE", 0);
+        _isDynamicReturn = configuration.optBoolean("DYN_RET", false);
+        _dynamicReturnSpeed = (float) configuration.optDouble("DYN_RET_SPD", 0.5);
+        _isMouseStaticReturn = configuration.optBoolean("MS_STAT_RET", false);
+        _mouseReturnType = configuration.optInt("MS_RET_TYPE", 0);
 
         requestLayout();
     }

@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 
+import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 
@@ -47,6 +48,7 @@ public class AbsoluteTouchContext implements TouchContext {
     private final int actionIndex;
     private final View targetView;
     private final Handler handler;
+    private VirtualController virtualController;
 
     private final Runnable leftButtonUpRunnable = new Runnable() {
         @Override
@@ -72,6 +74,10 @@ public class AbsoluteTouchContext implements TouchContext {
         this.actionIndex = actionIndex;
         this.targetView = view;
         this.handler = new Handler(Looper.getMainLooper());
+    }
+
+    public void setVirtualController(VirtualController vc) {
+        this.virtualController = vc;
     }
 
     @Override
@@ -115,6 +121,9 @@ public class AbsoluteTouchContext implements TouchContext {
         eventY = Math.min(Math.max(eventY, 0), targetView.getHeight());
 
         conn.sendMousePosition((short)eventX, (short)eventY, (short)targetView.getWidth(), (short)targetView.getHeight());
+        if (virtualController != null) {
+            virtualController.updateCursorPosition(eventX / (float)targetView.getWidth(), eventY / (float)targetView.getHeight());
+        }
     }
 
     @Override

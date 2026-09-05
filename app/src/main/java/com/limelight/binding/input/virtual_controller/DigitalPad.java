@@ -181,6 +181,11 @@ public class DigitalPad extends VirtualControllerElement {
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
             if (activePointerId == -1) {
+                // Exclusive Touch check: block if another element is already exclusive and pressed
+                if (virtualController.isAnyElementExclusivePressed()) {
+                    return true;
+                }
+
                 float pointerX = event.getX(actionIndex);
                 float pointerY = event.getY(actionIndex);
                 if (pointerX >= 0 && pointerX <= getWidth() && pointerY >= 0 && pointerY <= getHeight()) {

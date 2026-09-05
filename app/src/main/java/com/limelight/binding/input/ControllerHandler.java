@@ -39,6 +39,7 @@ import com.mooncake.R;
 import com.limelight.binding.input.driver.AbstractController;
 import com.limelight.binding.input.driver.UsbDriverListener;
 import com.limelight.binding.input.driver.UsbDriverService;
+import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.ControllerPacket;
 import com.limelight.nvstream.input.KeyboardPacket;
@@ -135,6 +136,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     private final PreferenceConfiguration prefConfig;
     private short currentControllers, initialControllers;
+
+    private VirtualController virtualController;
 
     public ControllerHandler(Activity activityContext, NvConnection conn, GameGestures gestures, PreferenceConfiguration prefConfig) {
         this.activityContext = activityContext;
@@ -2914,6 +2917,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         sendControllerInputPacket(defaultContext);
     }
 
+    public void setVirtualController(VirtualController vc) {
+        this.virtualController = vc;
+    }
+
     public void reportVirtualKeyboardInput(short keyMap, boolean down) {
         reportVirtualKeyboardInput(keyMap, down, (byte) 0);
     }
@@ -2933,9 +2940,25 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
+    public void reportVirtualMousePosition(float x, float y) {
+        if (conn != null) {
+            // Use a large fixed reference for normalization
+            conn.sendMousePosition((short)(x * 10000), (short)(y * 10000), (short)10000, (short)10000);
+            if (virtualController != null) {
+                virtualController.updateCursorPosition(x, y);
+            }
+        }
+    }
+
     public void reportVirtualMouseMove(short deltaX, short deltaY) {
         if (conn != null) {
             conn.sendMouseMove(deltaX, deltaY);
+            if (virtualController != null) {
+                virtualController.updateCursorPosition(
+                    virtualController.getCursorX() + (deltaX / (float)virtualController.getRefWidth()),
+                    virtualController.getCursorY() + (deltaY / (float)virtualController.getRefHeight())
+                );
+            }
         }
     }
 

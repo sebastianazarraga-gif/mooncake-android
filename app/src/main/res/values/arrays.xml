@@ -131,4 +131,9 @@
         <item>right</item>
         <item>left</item>
     </string-array>
+
+    <string-array name="mouse_return_types">
+        <item>Return all the time</item>
+        <item>Only return when touched</item>
+    </string-array>
 </resources>

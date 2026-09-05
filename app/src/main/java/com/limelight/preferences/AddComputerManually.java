@@ -334,6 +334,14 @@ public class AddComputerManually extends Activity {
                     ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
     }
 
+    @Override
+    public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+        super.onBackPressed();
+    }
+
     // Returns true if the event should be eaten
     private boolean handleDoneEvent() {
         String hostAddress = hostText.getText().toString().trim();

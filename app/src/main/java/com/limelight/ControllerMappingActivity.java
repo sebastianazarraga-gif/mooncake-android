@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.nvstream.input.ControllerPacket;
+import com.limelight.utils.UiHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +54,8 @@ public class ControllerMappingActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_controller_mapping);
+
+        UiHelper.notifyNewRootView(this);
 
         initActions();
         loadCurrentMappings();
@@ -171,6 +174,20 @@ public class ControllerMappingActivity extends Activity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+
+        if (pendingActionIndex != -1) {
+            cancelMapping();
+            return;
+        }
+
+        super.onBackPressed();
     }
 
     private void saveMapping(int keyCode, int flag) {

@@ -64,6 +64,25 @@ public class VirtualController {
     private int realBackgroundTouchCount = 0;
     private boolean isDispatchingTouchThrough = false;
 
+    private float cursorX = 0.5f, cursorY = 0.5f; // Normalized 0.0 to 1.0
+    private int refWidth = 1280, refHeight = 720;
+
+    public void setReferenceResolution(int w, int h) {
+        this.refWidth = w;
+        this.refHeight = h;
+    }
+
+    public int getRefWidth() { return refWidth; }
+    public int getRefHeight() { return refHeight; }
+
+    public void updateCursorPosition(float x, float y) {
+        this.cursorX = Math.max(0.0f, Math.min(1.0f, x));
+        this.cursorY = Math.max(0.0f, Math.min(1.0f, y));
+    }
+
+    public float getCursorX() { return cursorX; }
+    public float getCursorY() { return cursorY; }
+
     public void incrementBackgroundTouchCount() {
         this.realBackgroundTouchCount++;
     }
@@ -74,6 +93,15 @@ public class VirtualController {
 
     public boolean isBackgroundTouched() {
         return realBackgroundTouchCount > 0;
+    }
+
+    public boolean isAnyElementExclusivePressed() {
+        for (VirtualControllerElement element : elements) {
+            if (element.isExclusiveTouch() && element.isPressed()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setDispatchingTouchThrough(boolean dispatching) {

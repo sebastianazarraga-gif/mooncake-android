@@ -182,19 +182,6 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         if (appGridAdapter != null) {
             // Update the app grid adapter to create grid items with the correct layout
             appGridAdapter.updateLayoutWithPreferences(this, PreferenceConfiguration.readPreferences(this));
-
-            if (isFinishing() || isDestroyed()) {
-                return;
-            }
-
-            try {
-                // Reinflate the app grid itself to pick up the layout change
-                getFragmentManager().beginTransaction()
-                        .replace(R.id.appFragmentContainer, new AdapterFragment())
-                        .commitAllowingStateLoss();
-            } catch (IllegalStateException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -654,6 +641,13 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
     @Override
     public void receiveAbsListView(AbsListView listView) {
         listView.setAdapter(appGridAdapter);
+
+        // Disable transition group to avoid UnsupportedOperationException: removeView(View) is not supported in AdapterView
+        // when the transition system tries to capture a bitmap of the GridView.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            listView.setTransitionGroup(false);
+        }
+
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
@@ -671,6 +665,14 @@ public class AppView extends Activity implements AdapterFragmentCallbacks {
         UiHelper.applyStatusBarPadding(listView);
         registerForContextMenu(listView);
         listView.requestFocus();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+        super.onBackPressed();
     }
 
     public static class AppObject {

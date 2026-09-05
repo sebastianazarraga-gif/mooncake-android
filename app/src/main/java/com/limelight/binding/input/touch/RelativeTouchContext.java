@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 
+import com.limelight.binding.input.virtual_controller.VirtualController;
 import com.limelight.nvstream.NvConnection;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -30,6 +31,7 @@ public class RelativeTouchContext implements TouchContext {
     private final View targetView;
     private final PreferenceConfiguration prefConfig;
     private final Handler handler;
+    private VirtualController virtualController;
 
     private final Runnable dragTimerRunnable = new Runnable() {
         @Override
@@ -102,6 +104,10 @@ public class RelativeTouchContext implements TouchContext {
         this.targetView = view;
         this.prefConfig = prefConfig;
         this.handler = new Handler(Looper.getMainLooper());
+    }
+
+    public void setVirtualController(VirtualController vc) {
+        this.virtualController = vc;
     }
 
     @Override
@@ -285,6 +291,13 @@ public class RelativeTouchContext implements TouchContext {
                     }
                     else {
                         conn.sendMouseMove((short) deltaX, (short) deltaY);
+                    }
+                    
+                    if (virtualController != null) {
+                        virtualController.updateCursorPosition(
+                            virtualController.getCursorX() + (deltaX / (float)referenceWidth),
+                            virtualController.getCursorY() + (deltaY / (float)referenceHeight)
+                        );
                     }
                 }
 

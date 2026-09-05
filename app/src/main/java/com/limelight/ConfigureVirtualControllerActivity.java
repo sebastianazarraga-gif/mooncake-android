@@ -41,13 +41,13 @@ public class ConfigureVirtualControllerActivity extends Activity {
     private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer, repeatContainer, activationContainer, orderingContainer, orderSettingsContainer, holdRepeatContainer, holdRepeatSettings;
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
-    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner, dynamicStickSpinner;
-    private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider;
-    private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText;
-    private View dynamicStickContainer;
+    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner, dynamicStickSpinner, mouseReturnTypeSpinner;
+    private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider, returnSpeedSlider;
+    private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText, returnSpeedValueText;
+    private View dynamicStickContainer, returnSpeedContainer, mouseReturnProperties;
     private LinearLayout directionalBindings;
     private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton, removeSaveButton, importSaveButton, exportSaveButton;
-    private android.widget.CheckBox toggleModeCheckbox, shiftModeCheckbox, touchThroughCheckbox, avoidConflictCheckbox, exclusiveTouchCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox, dynamicModeCheckbox;
+    private android.widget.CheckBox toggleModeCheckbox, shiftModeCheckbox, touchThroughCheckbox, avoidConflictCheckbox, exclusiveTouchCheckbox, repeatModeCheckbox, orderingCheckbox, applyOnHoldCheckbox, holdRepeatCheckbox, dynamicModeCheckbox, dynamicReturnCheckbox, mouseStaticReturnCheckbox;
     private android.widget.EditText repeatIntervalEdit, activationTimeEdit, orderActivationEdit, orderGapEdit, holdRepeatDelayEdit, holdActivationEdit;
     private boolean isUpdatingUI = false;
 
@@ -173,6 +173,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_configure_virtual_controller);
 
+        UiHelper.notifyNewRootView(this);
+
         FrameLayout frameLayout = findViewById(R.id.configure_virtual_controller_frameLayout);
         virtualController = new VirtualController(null, frameLayout, this);
 
@@ -213,6 +215,15 @@ public class ConfigureVirtualControllerActivity extends Activity {
                     dynamicModeCheckbox = findViewById(R.id.dynamicModeCheckbox);
         dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
         dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
+
+        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
+        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
+        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
+        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
+
+        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
+        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
+        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
 
         updateSavesSpinner();
                 })
@@ -380,6 +391,15 @@ public class ConfigureVirtualControllerActivity extends Activity {
         dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
         dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
 
+        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
+        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
+        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
+        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
+
+        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
+        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
+        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
+
         updateSavesSpinner();
         updateAppsSpinner();
         
@@ -440,6 +460,15 @@ public class ConfigureVirtualControllerActivity extends Activity {
                     dynamicModeCheckbox = findViewById(R.id.dynamicModeCheckbox);
         dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
         dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
+
+        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
+        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
+        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
+        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
+
+        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
+        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
+        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
 
         updateSavesSpinner();
                     Toast.makeText(this, "Profile '" + current + "' removed", Toast.LENGTH_SHORT).show();
@@ -640,6 +669,51 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 VirtualControllerElement selected = virtualController.getSelectedElement();
                 if (selected != null) {
                     selected.setDynamicStickType(position);
+                }
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        dynamicReturnCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setDynamicReturn(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        returnSpeedSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (isUpdatingUI) return;
+                float val = (float) progress / 100.0f;
+                returnSpeedValueText.setText(String.format(java.util.Locale.US, "%.2f", val));
+                VirtualControllerElement selected = virtualController.getSelectedElement();
+                if (selected != null && fromUser) {
+                    selected.setDynamicReturnSpeed(val);
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        mouseStaticReturnCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isUpdatingUI) return;
+            VirtualControllerElement selected = virtualController.getSelectedElement();
+            if (selected != null) {
+                selected.setMouseStaticReturn(isChecked);
+                updatePropertiesVisibility(selected);
+            }
+        });
+
+        mouseReturnTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (isUpdatingUI) return;
+                VirtualControllerElement selected = virtualController.getSelectedElement();
+                if (selected != null) {
+                    selected.setMouseReturnType(position);
                 }
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
@@ -909,6 +983,17 @@ public class ConfigureVirtualControllerActivity extends Activity {
         // Dynamic Stick type selection (only for controller stick, not mouse)
         boolean isControllerStick = isStick && (mode == 0 || mode == 3);
         dynamicStickContainer.setVisibility(dynamicOn && isControllerStick ? View.VISIBLE : View.GONE);
+        
+        dynamicReturnCheckbox.setVisibility(dynamicOn && isControllerStick ? View.VISIBLE : View.GONE);
+        boolean returnOn = dynamicOn && isControllerStick && selected.isDynamicReturn();
+        returnSpeedContainer.setVisibility(returnOn ? View.VISIBLE : View.GONE);
+
+        // Mouse Static Return
+        boolean isMouseStick = isStick && (mode == 2 || mode == 3);
+        mouseStaticReturnCheckbox.setVisibility(dynamicOn && isMouseStick ? View.VISIBLE : View.GONE);
+        
+        boolean mouseReturnActive = dynamicOn && isMouseStick && selected.isMouseStaticReturn();
+        mouseReturnProperties.setVisibility(mouseReturnActive ? View.VISIBLE : View.GONE);
 
         directionalBindings.setVisibility(isStick && !dynamicOn ? View.VISIBLE : View.GONE);
         
@@ -996,7 +1081,13 @@ public class ConfigureVirtualControllerActivity extends Activity {
         shapeSpinner.setSelection(element.getShape().ordinal());
         dynamicModeCheckbox.setChecked(element.isDynamicMode());
         dynamicStickSpinner.setSelection(element.getDynamicStickType());
-        
+        dynamicReturnCheckbox.setChecked(element.isDynamicReturn());
+        returnSpeedSlider.setProgress((int) (element.getDynamicReturnSpeed() * 100));
+        returnSpeedValueText.setText(String.format(java.util.Locale.US, "%.2f", element.getDynamicReturnSpeed()));
+
+        mouseStaticReturnCheckbox.setChecked(element.isMouseStaticReturn());
+        mouseReturnTypeSpinner.setSelection(element.getMouseReturnType());
+
         toggleModeCheckbox.setChecked(element.isToggleMode());
         shiftModeCheckbox.setChecked(element.isShiftMode());
         touchThroughCheckbox.setChecked(element.isTouchThrough());
@@ -1432,6 +1523,15 @@ public class ConfigureVirtualControllerActivity extends Activity {
         dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
         dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
 
+        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
+        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
+        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
+        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
+
+        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
+        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
+        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
+
         updateSavesSpinner();
                         Toast.makeText(this, String.format(getString(R.string.profile_imported_toast), name), Toast.LENGTH_SHORT).show();
                     } else {
@@ -1444,6 +1544,21 @@ public class ConfigureVirtualControllerActivity extends Activity {
             })
             .setNegativeButton(android.R.string.cancel, null)
             .show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+
+        if (sidePanel.getVisibility() == View.VISIBLE) {
+            sidePanel.setVisibility(View.GONE);
+            virtualController.setSelectedElement(null);
+            return;
+        }
+
+        super.onBackPressed();
     }
 
     @Override

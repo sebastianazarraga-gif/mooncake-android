@@ -122,8 +122,15 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         // This is not prone to races because both callbacks are invoked
         // in the main thread.
         if (completeOnCreateCalled) {
-            // Reinitialize views just in case orientation changed
-            initializeViews();
+            // Update the PC grid adapter layout with current preferences
+            PreferenceConfiguration config = PreferenceConfiguration.readPreferences(this);
+            if (pcGridAdapter != null) {
+                pcGridAdapter.updateLayoutWithPreferences(this, config);
+            }
+            
+            // Relayout the UI elements without recreating the fragment if possible
+            UiHelper.setupBottomNav(this, 0);
+            UiHelper.applyImmersiveMode(this);
         }
     }
 
@@ -828,6 +835,13 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     @Override
     public void receiveAbsListView(AbsListView listView) {
         listView.setAdapter(pcGridAdapter);
+
+        // Disable transition group to avoid UnsupportedOperationException: removeView(View) is not supported in AdapterView
+        // when the transition system tries to capture a bitmap of the GridView.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            listView.setTransitionGroup(false);
+        }
+
         listView.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
@@ -847,6 +861,14 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         });
         UiHelper.applyStatusBarPadding(listView);
         registerForContextMenu(listView);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+        super.onBackPressed();
     }
 
     public static class ComputerObject {

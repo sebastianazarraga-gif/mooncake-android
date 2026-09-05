@@ -437,13 +437,7 @@ public class DigitalButton extends VirtualControllerElement {
                 if (!isDispatchedToBackground) {
                     // Send a fake DOWN event if we are starting mid-stream (after conflict cleared)
                     if (action == MotionEvent.ACTION_MOVE) {
-                        // First send a CANCEL to the background to ensure it's clean
-                        MotionEvent cancelEvent = MotionEvent.obtain(event);
-                        cancelEvent.setAction(MotionEvent.ACTION_CANCEL);
-                        dispatchToBackground(cancelEvent);
-                        cancelEvent.recycle();
-
-                        // Then send the new DOWN
+                        // Just send the new DOWN
                         MotionEvent downEvent = MotionEvent.obtain(event);
                         downEvent.setAction(MotionEvent.ACTION_DOWN);
                         dispatchToBackground(downEvent);
@@ -461,9 +455,23 @@ public class DigitalButton extends VirtualControllerElement {
                 isDispatchedToBackground = false;
             }
 
-            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
-                if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP || event.getPointerId(actionIndex) == activePointerId) {
-                    isDispatchedToBackground = false;
+            // Correct reset of isDispatchedToBackground on release
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                isDispatchedToBackground = false;
+            } else if (action == MotionEvent.ACTION_POINTER_UP) {
+                // Only reset if the active pointer is going up and there are no other fingers in bounds
+                if (event.getPointerId(actionIndex) == activePointerId) {
+                    boolean otherInBounds = false;
+                    for (int i = 0; i < event.getPointerCount(); i++) {
+                        if (i == actionIndex) continue;
+                        if (inRange(getX() + event.getX(i), getY() + event.getY(i))) {
+                            otherInBounds = true;
+                            break;
+                        }
+                    }
+                    if (!otherInBounds) {
+                        isDispatchedToBackground = false;
+                    }
                 }
             }
         }
@@ -472,6 +480,11 @@ public class DigitalButton extends VirtualControllerElement {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
                 if (activePointerId == -1) {
+                    // Exclusive Touch check: block if another element is already exclusive and pressed
+                    if (virtualController.isAnyElementExclusivePressed()) {
+                        return true;
+                    }
+
                     float pointerX = event.getX(actionIndex);
                     float pointerY = event.getY(actionIndex);
                     // Check if this pointer is within our bounds
@@ -498,11 +511,27 @@ public class DigitalButton extends VirtualControllerElement {
 
             case MotionEvent.ACTION_POINTER_UP:
                 if (activePointerId != -1 && event.getPointerId(actionIndex) == activePointerId) {
-                    activePointerId = -1;
-                    setPressed(false);
-                    onReleaseCallback();
-                    checkMovementForAllButtons(getX() + event.getX(actionIndex), getY() + event.getY(actionIndex));
-                    invalidate();
+                    // Try to handover to another pointer still in bounds
+                    int newPointerId = -1;
+                    for (int i = 0; i < event.getPointerCount(); i++) {
+                        if (i == actionIndex) continue;
+                        float px = event.getX(i);
+                        float py = event.getY(i);
+                        if (px >= 0 && px <= getWidth() && py >= 0 && py <= getHeight()) {
+                            newPointerId = event.getPointerId(i);
+                            break;
+                        }
+                    }
+
+                    if (newPointerId != -1) {
+                        activePointerId = newPointerId;
+                    } else {
+                        activePointerId = -1;
+                        setPressed(false);
+                        onReleaseCallback();
+                        checkMovementForAllButtons(getX() + event.getX(actionIndex), getY() + event.getY(actionIndex));
+                        invalidate();
+                    }
                 }
                 break;
 
@@ -549,6 +578,11 @@ public class DigitalButton extends VirtualControllerElement {
 
     public boolean checkMovement(float x, float y, DigitalButton movingButton) {
         if (movingButton.layer != this.layer) return false;
+        // If this button is exclusive and already has its own active touch,
+        // do not allow it to be triggered or released by a moving button.
+        // Also prevent being triggered by a slide-in if exclusive is on.
+        if (_isExclusiveTouch && movingButton != this) return false;
+
         boolean wasPressed = isPressed();
         if ((this.movingButton == null || movingButton == this.movingButton) && this.inRange(x, y)) {
             if (this.isPressed() != movingButton.isPressed()) this.setPressed(movingButton.isPressed());

@@ -44,6 +44,8 @@ public class HelpActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        UiHelper.notifyNewRootView(this);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             onBackInvokedCallback = new OnBackInvokedCallback() {
                 @Override
@@ -125,6 +127,10 @@ public class HelpActivity extends Activity {
     @Override
     // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true"
     public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+
         // Back goes back through the WebView history
         // until no more history remains
         if (webView.canGoBack()) {

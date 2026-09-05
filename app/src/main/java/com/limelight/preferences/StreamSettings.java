@@ -149,6 +149,10 @@ public class StreamSettings extends Activity {
     @Override
     // NOTE: This will NOT be called on Android 13+ with android:enableOnBackInvokedCallback="true"
     public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+
         finish();
 
         // Language changes are handled via configuration changes in Android 13+,

@@ -391,4 +391,12 @@ public class ShortcutTrampoline extends Activity {
 
         finish();
     }
+
+    @Override
+    public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+        super.onBackPressed();
+    }
 }

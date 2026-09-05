@@ -236,20 +236,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         prefConfig = PreferenceConfiguration.readPreferences(this);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
 
+        UiHelper.notifyNewRootView(this);
+
         // Enter landscape unless we're on a square screen
         setPreferredOrientationForCurrentDisplay();
 
-        if (prefConfig.stretchVideo || shouldIgnoreInsetsForResolution(prefConfig.width, prefConfig.height)) {
-            // Allow the activity to layout under notches if the fill-screen option
-            // was turned on by the user or it's a full-screen native resolution
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                getWindow().getAttributes().layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-            }
-            else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                getWindow().getAttributes().layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            }
+        // Always allow layout under notches and barriers
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getWindow().getAttributes().layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
 
         // Listen for non-touch events on the game surface
@@ -530,6 +529,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             virtualController = new VirtualController(controllerHandler,
                     (FrameLayout)streamView.getParent(),
                     this);
+            virtualController.setReferenceResolution(prefConfig.width, prefConfig.height);
+            controllerHandler.setVirtualController(virtualController);
             virtualController.refreshLayout();
             virtualController.show();
         }
@@ -920,26 +921,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 Math.round(refreshRate) % prefConfig.fps <= 3;
     }
 
-    private boolean shouldIgnoreInsetsForResolution(int width, int height) {
-        // Never ignore insets for non-native resolutions
-        if (!PreferenceConfiguration.isNativeResolution(width, height)) {
-            return false;
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Display display = getWindowManager().getDefaultDisplay();
-            for (Display.Mode candidate : display.getSupportedModes()) {
-                // Ignore insets if this is an exact match for the display resolution
-                if ((width == candidate.getPhysicalWidth() && height == candidate.getPhysicalHeight()) ||
-                        (height == candidate.getPhysicalWidth() && width == candidate.getPhysicalHeight())) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     private boolean mayReduceRefreshRate() {
         return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||
                 prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
@@ -1139,6 +1120,8 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private final Runnable hideSystemUi = new Runnable() {
             @Override
             public void run() {
+                if (isFinishing() || isDestroyed()) return;
+
                 // TODO: Do we want to use WindowInsetsController here on R+ instead of
                 // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
 
@@ -1149,7 +1132,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
                 }
                 else if (PreferenceConfiguration.readPreferences(Game.this).immersiveMode) {
-                    // Use immersive mode
+                    // Use immersive mode to hide bars completely
                     Game.this.getWindow().getDecorView().setSystemUiVisibility(
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
                             View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
@@ -1159,8 +1142,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
                 }
                 else {
+                    // Draw edge-to-edge behind bars without barriers
                     Game.this.getWindow().getDecorView().setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
                 }
             }
     };
@@ -1334,6 +1320,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private final Runnable toggleGrab = new Runnable() {
         @Override
         public void run() {
+            if (isFinishing() || isDestroyed()) return;
             setInputGrabState(!grabbedInput);
         }
     };
@@ -2313,6 +2300,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     }
                     break;
                 case MotionEvent.ACTION_CANCEL:
+                    if (virtualController != null && !virtualController.isDispatchingTouchThrough()) {
+                        // Reset background touch count on cancel as all non-button pointers are gone
+                        while (virtualController.isBackgroundTouched()) {
+                            virtualController.decrementBackgroundTouchCount();
+                        }
+                    }
                     for (int i = 0; i < MAX_TOUCH_POINTS; i++) {
                         if (slotsBusy[i]) {
                             touchContextMap[i].cancelTouch();
@@ -2392,6 +2385,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         eventY = Math.min(Math.max(eventY, 0), streamView.getHeight());
 
         conn.sendMousePosition((short)eventX, (short)eventY, (short)streamView.getWidth(), (short)streamView.getHeight());
+        if (virtualController != null) {
+            virtualController.updateCursorPosition(eventX / (float)streamView.getWidth(), eventY / (float)streamView.getHeight());
+        }
     }
 
     @Override
@@ -2884,6 +2880,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void onBackPressed() {
+        if (isFinishing()) {
+            return;
+        }
+
+        // Reset orientation before finishing to prevent transition-recreation collisions
+        // when returning to a portrait activity from a landscape one.
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+
         if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START);
         }
