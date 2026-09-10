@@ -43,16 +43,6 @@ public class UiHelper {
     private static Class<? extends Activity> lastComputerActivity = com.limelight.PcView.class;
     private static Class<? extends Activity> lastSettingsActivity = com.limelight.preferences.StreamSettings.class;
 
-    private static boolean isTrueEdgeToEdgeActivity(Activity activity) {
-        return activity instanceof com.limelight.Game ||
-               activity instanceof com.limelight.ConfigureVirtualControllerActivity ||
-               activity instanceof com.limelight.ControllerMappingActivity;
-    }
-
-    private static boolean isLandscape(Activity activity) {
-        return activity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
-    }
-
     public static void updateLastActivity(Activity activity) {
         if (activity instanceof com.limelight.PcView ||
             activity instanceof com.limelight.AppView ||
@@ -126,6 +116,17 @@ public class UiHelper {
         }
     }
 
+    private static boolean isTrueEdgeToEdgeActivity(Activity activity) {
+        return activity instanceof com.limelight.Game ||
+               activity instanceof com.limelight.ConfigureVirtualControllerActivity ||
+               activity instanceof com.limelight.ControllerMappingActivity;
+    }
+
+    private static boolean isLandscape(Activity activity) {
+        return activity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+    }
+
+
     public static void applyStatusBarPadding(final View view) {
         if (view == null) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -135,24 +136,35 @@ public class UiHelper {
                     Context context = v.getContext();
                     if (context instanceof Activity) {
                         Activity activity = (Activity) context;
+
+                        // Ensure window flags and colors match current orientation and immersive settings
+                        applyImmersiveMode(activity);
+
+                        // Fetch system bar and cutout insets
+                        Insets bars;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                        } else {
+                            bars = Insets.of(insets.getSystemWindowInsetLeft(),
+                                             insets.getSystemWindowInsetTop(),
+                                             insets.getSystemWindowInsetRight(),
+                                             insets.getSystemWindowInsetBottom());
+                        }
+
                         // Streaming and Mapping screens are always true edge-to-edge (no barriers)
-                        // Landscape orientation is also always edge-to-edge (no barriers)
-                        if (isTrueEdgeToEdgeActivity(activity) || isLandscape(activity)) {
+                        if (isTrueEdgeToEdgeActivity(activity)) {
                             v.setPadding(0, 0, 0, 0);
                             return insets;
                         }
-                    }
 
-                    // Portrait Menu screens: Apply top barrier for status bar symbols (batteries, wifi)
-                    int topInset;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        // Combine status bars and display cutout insets for a complete upper barrier
-                        topInset = insets.getInsets(WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout()).top;
-                    } else {
-                        topInset = insets.getSystemWindowInsetTop();
+                        // Landscape orientation: Edge-to-edge top and sides
+                        if (isLandscape(activity)) {
+                            v.setPadding(0, 0, 0, 0);
+                        } else {
+                            // Portrait: Respect top barrier (status bar) but edge-to-edge sides
+                            v.setPadding(0, bars.top, 0, 0);
+                        }
                     }
-
-                    v.setPadding(0, topInset, 0, 0);
                     return insets;
                 }
             });
@@ -216,21 +228,7 @@ public class UiHelper {
                     horizontalPaddingPixels, verticalPaddingPixels);
         }
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Draw under system bars globally to allow edge-to-edge bottom navigation
-            activity.getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-
-            // Set status bar color based on orientation/activity
-            if (isTrueEdgeToEdgeActivity(activity) || isLandscape(activity)) {
-                activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
-            } else {
-                activity.getWindow().setStatusBarColor(activity.getResources().getColor(R.color.black_purple));
-            }
-            activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
-
-            // Apply padding logic to the content view directly
+            // Apply padding logic and window bars setup through the common listener
             applyStatusBarPadding(rootView);
         }
     }
@@ -345,9 +343,9 @@ public class UiHelper {
                                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
                                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
                                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                                View.SYSTEM_UI_FLAG_FULLSCREEN |
                                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-
+                
                 activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
                 activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
             }
@@ -449,6 +447,21 @@ public class UiHelper {
         });
 
         // Handle System Navigation Bar Insets
-        // Barriers removed for edge-to-edge content
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            bottomNav.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                @Override
+                public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                    int bottomInset = 0;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        bottomInset = insets.getInsets(WindowInsets.Type.systemBars()).bottom;
+                    } else {
+                        bottomInset = insets.getSystemWindowInsetBottom();
+                    }
+                    v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), bottomInset);
+                    return insets;
+                }
+            });
+            bottomNav.requestApplyInsets();
+        }
     }
 }

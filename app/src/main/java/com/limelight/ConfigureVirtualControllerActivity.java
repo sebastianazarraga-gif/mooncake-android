@@ -113,7 +113,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         // Numpad
         {"Num Lock", "Numpad 0", "Numpad 1", "Numpad 2", "Numpad 3", "Numpad 4", "Numpad 5", "Numpad 6", "Numpad 7", "Numpad 8", "Numpad 9", "Numpad .", "Numpad /", "Numpad *", "Numpad -", "Numpad +", "Numpad Enter"},
         // Punctuation / Symbols
-        {"Semicolon ;", "Equal =", "Comma ,", "Minus -", "Period .", "Slash /", "Grave `", "Left Bracket [", "Backslash \\", "Right Bracket ]", "Apostrophe '"},
+        {"Semicolon ;", "Equal =", "Comma ,", "Minus -", "Period .", "Slash /", "Grave `", "Left Bracket [", "Backslash \\", "Right Bracket ]", "Apostrophe '", "Tilde ~", "Double Quote \""},
         // System / Special
         {"Print Screen", "Scroll Lock", "Pause/Break", "Menu/Application"}
     };
@@ -134,7 +134,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         // Numpad
         {0x90, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6E, 0x6F, 0x6A, 0x6D, 0x6B, 0x0D},
         // Punctuation / Symbols
-        {0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xDB, 0xDC, 0xDD, 0xDE},
+        {0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, 0xDB, 0xDC, 0xDD, 0xDE, (short) 0x01DF, (short) 0x0132},
         // System / Special
         {0x2C, 0x91, 0x13, 0x5D}
     };
@@ -147,6 +147,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         "Del", "PrtSc", "Caps Lock", "Ins", "Home", "End", "PgUp", "PgDn",
         "Semicolon ;", "Equal =", "Comma ,", "Minus -", "Period .", "Slash /", "Grave `",
         "Left Bracket [", "Backslash \\", "Right Bracket ]", "Apostrophe '",
+        "Tilde ~", "Double Quote \"",
         "Num Lock", "Scroll Lock", "Pause",
         "Numpad 0", "Numpad 1", "Numpad 2", "Numpad 3", "Numpad 4", "Numpad 5", "Numpad 6", "Numpad 7", "Numpad 8", "Numpad 9",
         "Numpad *", "Numpad +", "Numpad -", "Numpad .", "Numpad /", "Numpad Enter"
@@ -159,6 +160,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         0x2E, 0x2C, 0x14, 0x2D, 0x24, 0x23, 0x21, 0x22,
         0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0,
         0xDB, 0xDC, 0xDD, 0xDE,
+        (short) 0x01DF, (short) 0x0132,
         0x90, 0x91, 0x13,
         0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69,
         0x6A, 0x6B, 0x6D, 0x6E, 0x6F, 0x0D

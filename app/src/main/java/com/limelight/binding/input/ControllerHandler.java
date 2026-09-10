@@ -2927,6 +2927,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
 
     public void reportVirtualKeyboardInput(short keyMap, boolean down, byte modifiers) {
         if (conn != null) {
+            // Handle independent symbol keycodes (Bit 8 = Shift)
+            // This ensures accuracy for keys like Tilde and Double Quote.
+            if ((keyMap & 0x0100) != 0) {
+                modifiers |= KeyboardPacket.MODIFIER_SHIFT;
+                keyMap &= 0xFF;
+            }
+
             conn.sendKeyboardInput(keyMap,
                     down ? KeyboardPacket.KEY_DOWN : KeyboardPacket.KEY_UP,
                     modifiers, (byte) 0);
