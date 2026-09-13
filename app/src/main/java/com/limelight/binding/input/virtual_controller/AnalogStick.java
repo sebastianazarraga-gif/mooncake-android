@@ -39,6 +39,10 @@ public class AnalogStick extends VirtualControllerElement {
     private long timeLastClick = 0;
     private boolean uDown, dDown, lDown, rDown;
 
+    private float velNX = 0, velNY = 0;
+    private float lastNX = 0, lastNY = 0;
+    private long lastTouchTime = 0;
+
     private final Runnable mouseRepeatRunnable = new Runnable() {
         @Override
         public void run() {
@@ -56,9 +60,125 @@ public class AnalogStick extends VirtualControllerElement {
         }
     };
 
+    private long lastUpdateTime = 0;
+    private final Runnable dynamicUpdateRunnable = new Runnable() {
+        @Override
+        public void run() {
+            long currentTime = System.currentTimeMillis();
+            if (lastUpdateTime == 0) lastUpdateTime = currentTime;
+            float deltaTime = (currentTime - lastUpdateTime) / 1000f;
+            lastUpdateTime = currentTime;
+            
+            // Clamp deltaTime to avoid physics explosion after a long stall
+            if (deltaTime > 0.1f) deltaTime = 0.1f;
+            if (deltaTime <= 0) deltaTime = 0.01f;
+
+            boolean continueLoop = false;
+
+            if (!isPressed() && _isDynamicReturn && (movement_radius > 0 || Math.abs(velNX) > 0.001f || Math.abs(velNY) > 0.001f)) {
+                // Critically damped (or slightly overdamped) spring physics
+                // Reduced omega for a slower, more deliberate return
+                float omega = 3.0f + _dynamicReturnSpeed * 7.0f;
+                float damping = 2.5f * omega; // Overdamped to eliminate "jiggles"
+
+                // Current normalized position
+                float range = radius_complete - radius_analog_stick;
+                float curY = (float) (Math.sin(movement_angle) * movement_radius);
+                float curX = (float) (Math.cos(movement_angle) * movement_radius);
+                float nX = (range > 0) ? curX / range : 0;
+                float nY = (range > 0) ? -curY / range : 0;
+
+                // Apply physics step
+                float accX = -omega * omega * nX - damping * velNX;
+                float accY = -omega * omega * nY - damping * velNY;
+
+                if (!Float.isNaN(accX) && !Float.isInfinite(accX)) velNX += accX * deltaTime;
+                if (!Float.isNaN(accY) && !Float.isInfinite(accY)) velNY += accY * deltaTime;
+                if (!Float.isNaN(velNX)) nX += velNX * deltaTime;
+                if (!Float.isNaN(velNY)) nY += velNY * deltaTime;
+
+                if (Float.isNaN(nX)) nX = 0;
+                if (Float.isNaN(nY)) nY = 0;
+
+                // Update visual state
+                float newCorX = nX * range;
+                float newCorY = -nY * range;
+                movement_radius = (float) Math.sqrt(newCorX * newCorX + newCorY * newCorY);
+                movement_angle = Math.atan2(newCorY, newCorX);
+
+                if (movement_radius > range) {
+                    movement_radius = range;
+                }
+
+                // Snap to center when sufficiently close and slow
+                if (movement_radius < 0.001f && Math.abs(velNX) < 0.1f && Math.abs(velNY) < 0.1f) {
+                    movement_radius = 0;
+                    velNX = 0;
+                    velNY = 0;
+                    nX = 0;
+                    nY = 0;
+                }
+
+                position_stick_x = getWidth() / 2.0f + (float) (Math.cos(movement_angle) * movement_radius);
+                position_stick_y = getHeight() / 2.0f + (float) (Math.sin(movement_angle) * movement_radius);
+
+                stick_state = (movement_radius > radius_dead_zone) ? STICK_STATE.MOVED_ACTIVE : STICK_STATE.MOVED_IN_DEAD_ZONE;
+                if (movement_radius == 0) stick_state = STICK_STATE.NO_MOVEMENT;
+
+                // Output handling
+                // When in Dynamic Mode, the deadzone is removed for output
+                float outX, outY;
+                if (isDynamicMode()) {
+                    outX = nX;
+                    outY = nY;
+                } else {
+                    outX = (stick_state == STICK_STATE.MOVED_ACTIVE) ? nX : 0;
+                    outY = (stick_state == STICK_STATE.MOVED_ACTIVE) ? nY : 0;
+                }
+
+                notifyOnMovement(outX, outY);
+                
+                if (isDynamicMode() && (isMouseMapping() || isCombinedMapping())) {
+                    ControllerHandler ch = virtualController.getControllerHandler();
+                    if (ch != null && (outX != 0 || outY != 0)) {
+                        ch.reportVirtualMouseMove((short) (outX * 15 * _sensitivity * _globalSensitivity), 
+                                                (short) (-outY * 15 * _sensitivity * _globalSensitivity));
+                    }
+                }
+
+                updateDirectionalKeys(outX, outY);
+                invalidate();
+                
+                if (movement_radius > 0 || Math.abs(velNX) > 0.001f || Math.abs(velNY) > 0.001f) continueLoop = true;
+            } else if (isPressed() && isDynamicMode() && (isMouseMapping() || isCombinedMapping())) {
+                // Continuous mouse reporting while held
+                float curY = (float) (Math.sin(movement_angle) * movement_radius);
+                float curX = (float) (Math.cos(movement_angle) * movement_radius);
+                float range = radius_complete - radius_analog_stick;
+                float nX = (range > 0) ? curX / range : 0;
+                float nY = (range > 0) ? -curY / range : 0;
+                
+                ControllerHandler ch = virtualController.getControllerHandler();
+                if (ch != null && (nX != 0 || nY != 0)) {
+                    ch.reportVirtualMouseMove((short) (nX * 15 * _sensitivity * _globalSensitivity), 
+                                            (short) (-nY * 15 * _sensitivity * _globalSensitivity));
+                }
+                
+                notifyOnMovement(nX, nY);
+                continueLoop = true;
+            }
+
+            if (continueLoop) {
+                virtualController.getHandler().postDelayed(this, 10);
+            } else {
+                lastUpdateTime = 0;
+            }
+        }
+    };
+
     private void handleDirMouseInternal(MouseAction action, ControllerHandler ch) {
         float totalSense = _sensitivity * _globalSensitivity;
-        
+
         if (action == MouseAction.MoveUp) ch.reportVirtualMouseMove((short)0, (short)(-20 * totalSense));
         else if (action == MouseAction.MoveDown) ch.reportVirtualMouseMove((short)0, (short)(20 * totalSense));
         else if (action == MouseAction.MoveLeft) ch.reportVirtualMouseMove((short)(-20 * totalSense), (short)0);
@@ -81,22 +201,15 @@ public class AnalogStick extends VirtualControllerElement {
         ControllerHandler ch = virtualController.getControllerHandler();
         if (ch == null) return;
 
+        if (isDynamicMode()) return;
+        if (!hasAnyDirectionalBinding()) return;
+
         // Standard mapping: Physically UP stick (pos y in logic) results in newU=true
         boolean newU = y > 0.3f;
         boolean newD = y < -0.3f;
         boolean newL = x < -0.3f;
         boolean newR = x > 0.3f;
 
-        if (isMouseMapping() || isCombinedMapping()) {
-            if (_mouseAction == MouseAction.None) {
-                // Continuous axis-based movement
-                ch.reportVirtualMouseMove((short) (x * 20 * _sensitivity * _globalSensitivity), (short) (-y * 20 * _sensitivity * _globalSensitivity));
-            } else {
-                // Whole-stick action (like scroll)
-                handleDirMouseInternal(_mouseAction, ch);
-            }
-        }
-        
         // Always handle directional mouse binds regardless of main stick mode
         handleDirMouse(newU, uDown, _mappedDirUpMouseAction, ch);
         handleDirMouse(newD, dDown, _mappedDirDownMouseAction, ch);
@@ -125,9 +238,9 @@ public class AnalogStick extends VirtualControllerElement {
 
         // Start repeating logic if we have mouse binds active
         if ((uDown || dDown || lDown || rDown)) {
-            boolean hasMouseBinds = isMouseBind(_mappedDirUpMouseAction) || isMouseBind(_mappedDirDownMouseAction) || 
+            boolean hasMouseBinds = isMouseBind(_mappedDirUpMouseAction) || isMouseBind(_mappedDirDownMouseAction) ||
                                    isMouseBind(_mappedDirLeftMouseAction) || isMouseBind(_mappedDirRightMouseAction);
-            
+
             if (hasMouseBinds) {
                 virtualController.getHandler().removeCallbacks(mouseRepeatRunnable);
                 virtualController.getHandler().post(mouseRepeatRunnable);
@@ -218,23 +331,48 @@ public class AnalogStick extends VirtualControllerElement {
                     stick_state = STICK_STATE.MOVED_IN_DEAD_ZONE;
                     setPressed(true);
                     timeLastClick = event.getEventTime();
+
+                    velNX = 0; velNY = 0;
+                    lastTouchTime = event.getEventTime();
+                    lastNX = 0; lastNY = 0;
+
+                    virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
+                    if (isDynamicMode() && (isMouseMapping() || isCombinedMapping())) {
+                        virtualController.getHandler().post(dynamicUpdateRunnable);
+                    }
                 }
             }
         } else if (action == MotionEvent.ACTION_POINTER_UP) {
             if (activePointerId != -1 && event.getPointerId(actionIndex) == activePointerId) {
                 activePointerId = -1;
                 setPressed(false);
-                stick_state = STICK_STATE.NO_MOVEMENT;
-                notifyOnMovement(0, 0);
-                updateDirectionalKeys(0, 0);
+                if (!_isDynamicReturn) {
+                    stick_state = STICK_STATE.NO_MOVEMENT;
+                    movement_radius = 0;
+                    notifyOnMovement(0, 0);
+                    updateDirectionalKeys(0, 0);
+                } else {
+                    virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
+                    velNX *= 0.5f;
+                    velNY *= 0.5f;
+                    virtualController.getHandler().post(dynamicUpdateRunnable);
+                }
             }
         } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             if (activePointerId != -1) {
                 activePointerId = -1;
                 setPressed(false);
-                stick_state = STICK_STATE.NO_MOVEMENT;
-                notifyOnMovement(0, 0);
-                updateDirectionalKeys(0, 0);
+                if (!_isDynamicReturn) {
+                    stick_state = STICK_STATE.NO_MOVEMENT;
+                    movement_radius = 0;
+                    notifyOnMovement(0, 0);
+                    updateDirectionalKeys(0, 0);
+                } else {
+                    virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
+                    velNX *= 0.5f;
+                    velNY *= 0.5f;
+                    virtualController.getHandler().post(dynamicUpdateRunnable);
+                }
             }
         }
 
@@ -257,22 +395,61 @@ public class AnalogStick extends VirtualControllerElement {
 
                 stick_state = (movement_radius > radius_dead_zone) ? STICK_STATE.MOVED_ACTIVE : STICK_STATE.MOVED_IN_DEAD_ZONE;
 
-                float nX = 0;
-                float nY = 0;
-                if (stick_state == STICK_STATE.MOVED_ACTIVE) {
-                    nX = corX / (radius_complete - radius_analog_stick);
-                    nY = -corY / (radius_complete - radius_analog_stick);
+                float range = radius_complete - radius_analog_stick;
+                float nX = (range > 0) ? corX / range : 0;
+                float nY = (range > 0) ? -corY / range : 0;
+
+                long time = event.getEventTime();
+                if (lastTouchTime > 0 && time > lastTouchTime) {
+                    float dt = (time - lastTouchTime) / 1000f;
+                    if (dt > 0.001f && dt < 0.1f) {
+                        float vX = (nX - lastNX) / dt;
+                        float vY = (nY - lastNY) / dt;
+                        if (!Float.isNaN(vX) && !Float.isInfinite(vX)) velNX = vX;
+                        if (!Float.isNaN(vY) && !Float.isInfinite(vY)) velNY = vY;
+                    }
+                }
+                lastNX = nX;
+                lastNY = nY;
+                lastTouchTime = time;
+
+                // When in Dynamic Mode, the deadzone is removed for output
+                float outX, outY;
+                if (isDynamicMode()) {
+                    outX = nX;
+                    outY = nY;
+                } else {
+                    outX = (stick_state == STICK_STATE.MOVED_ACTIVE) ? nX : 0;
+                    outY = (stick_state == STICK_STATE.MOVED_ACTIVE) ? nY : 0;
                 }
 
-                notifyOnMovement(nX, nY);
-                updateDirectionalKeys(nX, nY);
+                notifyOnMovement(outX, outY);
+                updateDirectionalKeys(outX, outY);
             }
         }
         invalidate();
         return true;
     }
 
-    private void notifyOnMovement(float x, float y) { for (AnalogStickListener l : listeners) l.onMovement(x, y); }
+    private void notifyOnMovement(float x, float y) {
+        if (isDynamicMode()) {
+            if (!(isMouseMapping() || isCombinedMapping())) {
+                VirtualController.ControllerInputContext ctx = virtualController.getControllerInputContext();
+                if (_dynamicStickType == 0) { // Left Stick
+                    ctx.leftStickX = (short) (x * 0x7FFE);
+                    ctx.leftStickY = (short) (y * 0x7FFE);
+                } else { // Right Stick
+                    ctx.rightStickX = (short) (x * 0x7FFE);
+                    ctx.rightStickY = (short) (y * 0x7FFE);
+                }
+                virtualController.sendControllerInputContext();
+            }
+        }
+
+        if (!isDynamicMode() && !hasAnyDirectionalBinding()) return;
+
+        for (AnalogStickListener l : listeners) l.onMovement(x, y);
+    }
     public interface AnalogStickListener { void onMovement(float x, float y); void onClick(); void onDoubleClick(); void onRevoke(); }
     public void addAnalogStickListener(AnalogStickListener listener) { listeners.add(listener); }
 }

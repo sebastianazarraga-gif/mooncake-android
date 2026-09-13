@@ -15,15 +15,6 @@ public class RightAnalogStick extends AnalogStick {
         addAnalogStickListener(new AnalogStick.AnalogStickListener() {
             @Override
             public void onMovement(float x, float y) {
-                if (isKeyboardMapping() || isMouseMapping() || isDynamicMode()) {
-                    return;
-                }
-                VirtualController.ControllerInputContext inputContext =
-                        controller.getControllerInputContext();
-                inputContext.rightStickX = (short) (x * 0x7FFE);
-                inputContext.rightStickY = (short) (y * 0x7FFE);
-
-                controller.sendControllerInputContext();
             }
 
             @Override

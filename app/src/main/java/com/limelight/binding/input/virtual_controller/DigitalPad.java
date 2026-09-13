@@ -97,12 +97,12 @@ public class DigitalPad extends VirtualControllerElement {
         // Gamepad mapping
         if (!isKeyboardMapping() && !isMouseMapping() || isCombinedMapping()) {
             VirtualController.ControllerInputContext ctx = virtualController.getControllerInputContext();
-            
+
             updateGpFlag(isU, uDown, _mappedDirUpGamepadFlag, ctx);
             updateGpFlag(isD, dDown, _mappedDirDownGamepadFlag, ctx);
             updateGpFlag(isL, lDown, _mappedDirLeftGamepadFlag, ctx);
             updateGpFlag(isR, rDown, _mappedDirRightGamepadFlag, ctx);
-            
+
             if (isU != uDown || isD != dDown || isL != lDown || isR != rDown) {
                 virtualController.sendControllerInputContext();
             }

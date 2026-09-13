@@ -204,13 +204,21 @@ public class VirtualControllerConfigurationLoader {
     private static AnalogStick createLeftStick(
             final VirtualController controller,
             final Context context) {
-        return new LeftAnalogStick(controller, context);
+        AnalogStick stick = new LeftAnalogStick(controller, context);
+        stick.setDynamicMode(true);
+        stick.setDynamicStickType(0); // Left Stick
+        stick.setDynamicReturn(true);
+        return stick;
     }
 
     private static AnalogStick createRightStick(
             final VirtualController controller,
             final Context context) {
-        return new RightAnalogStick(controller, context);
+        AnalogStick stick = new RightAnalogStick(controller, context);
+        stick.setDynamicMode(true);
+        stick.setDynamicStickType(1); // Right Stick
+        stick.setDynamicReturn(true);
+        return stick;
     }
 
 

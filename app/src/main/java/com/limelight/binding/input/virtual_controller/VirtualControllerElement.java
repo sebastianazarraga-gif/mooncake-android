@@ -524,6 +524,12 @@ public abstract class VirtualControllerElement extends View {
     public void setMappedDirRightMouseAction(MouseAction action) { _mappedDirRightMouseAction = action; invalidate(); }
     public MouseAction getMappedDirRightMouseAction() { return _mappedDirRightMouseAction; }
 
+    public boolean hasAnyDirectionalBinding() {
+        return _mappedKeyUp != 0 || _mappedKeyDown != 0 || _mappedKeyLeft != 0 || _mappedKeyRight != 0 ||
+               _mappedDirUpGamepadFlag != 0 || _mappedDirDownGamepadFlag != 0 || _mappedDirLeftGamepadFlag != 0 || _mappedDirRightGamepadFlag != 0 ||
+               _mappedDirUpMouseAction != MouseAction.None || _mappedDirDownMouseAction != MouseAction.None || _mappedDirLeftMouseAction != MouseAction.None || _mappedDirRightMouseAction != MouseAction.None;
+    }
+
     public void setCustomColor(int color) {
         _customColor = color;
         updateColors();
