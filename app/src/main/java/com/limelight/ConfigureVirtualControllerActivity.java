@@ -42,8 +42,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
     private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner, dynamicStickSpinner, mouseReturnTypeSpinner;
-    private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider, returnSpeedSlider;
-    private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText, returnSpeedValueText;
+    private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider, returnSpeedSlider, jigglenessSlider;
+    private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText, returnSpeedValueText, jigglenessValueText;
     private View dynamicStickContainer, returnSpeedContainer, mouseReturnProperties;
     private LinearLayout directionalBindings;
     private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton, removeSaveButton, importSaveButton, exportSaveButton;
@@ -214,20 +214,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
                     if (name.isEmpty()) name = "Default";
                     VirtualControllerConfigurationLoader.saveProfile(virtualController, this, name);
                     Toast.makeText(this, String.format(getString(R.string.profile_saved_toast), name), Toast.LENGTH_SHORT).show();
-                    dynamicModeCheckbox = findViewById(R.id.dynamicModeCheckbox);
-        dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
-        dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
-
-        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
-        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
-        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
-        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
-
-        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
-        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
-        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
-
-        updateSavesSpinner();
+                    updateSavesSpinner();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -397,6 +384,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
         returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
         returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
+        jigglenessSlider = findViewById(R.id.jigglenessSlider);
+        jigglenessValueText = findViewById(R.id.jigglenessValueText);
 
         mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
         mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
@@ -459,20 +448,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 .setPositiveButton(R.string.yes, (dialog, which) -> {
                     VirtualControllerConfigurationLoader.deleteProfile(this, current);
                     virtualController.refreshLayout();
-                    dynamicModeCheckbox = findViewById(R.id.dynamicModeCheckbox);
-        dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
-        dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
-
-        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
-        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
-        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
-        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
-
-        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
-        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
-        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
-
-        updateSavesSpinner();
+                    updateSavesSpinner();
                     Toast.makeText(this, "Profile '" + current + "' removed", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton(R.string.no, null)
@@ -694,6 +670,21 @@ public class ConfigureVirtualControllerActivity extends Activity {
                 VirtualControllerElement selected = virtualController.getSelectedElement();
                 if (selected != null && fromUser) {
                     selected.setDynamicReturnSpeed(val);
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        jigglenessSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (isUpdatingUI) return;
+                float val = (float) progress / 100.0f;
+                jigglenessValueText.setText(String.format(java.util.Locale.US, "%.2f", val));
+                VirtualControllerElement selected = virtualController.getSelectedElement();
+                if (selected != null && fromUser) {
+                    selected.setDynamicJiggleness(val);
                 }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
@@ -1086,6 +1077,9 @@ public class ConfigureVirtualControllerActivity extends Activity {
         dynamicReturnCheckbox.setChecked(element.isDynamicReturn());
         returnSpeedSlider.setProgress((int) (element.getDynamicReturnSpeed() * 100));
         returnSpeedValueText.setText(String.format(java.util.Locale.US, "%.2f", element.getDynamicReturnSpeed()));
+
+        jigglenessSlider.setProgress((int) (element.getDynamicJiggleness() * 100));
+        jigglenessValueText.setText(String.format(java.util.Locale.US, "%.2f", element.getDynamicJiggleness()));
 
         mouseStaticReturnCheckbox.setChecked(element.isMouseStaticReturn());
         mouseReturnTypeSpinner.setSelection(element.getMouseReturnType());
@@ -1521,20 +1515,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
                     if (VirtualControllerConfigurationLoader.importProfileFromJson(this, name, json)) {
                         VirtualControllerConfigurationLoader.setCurrentProfileName(this, name);
                         virtualController.refreshLayout();
-                        dynamicModeCheckbox = findViewById(R.id.dynamicModeCheckbox);
-        dynamicStickContainer = findViewById(R.id.dynamicStickContainer);
-        dynamicStickSpinner = findViewById(R.id.dynamicStickSpinner);
-
-        dynamicReturnCheckbox = findViewById(R.id.dynamicReturnCheckbox);
-        returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
-        returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
-        returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
-
-        mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
-        mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
-        mouseReturnTypeSpinner = findViewById(R.id.mouseReturnTypeSpinner);
-
-        updateSavesSpinner();
+                        updateSavesSpinner();
                         Toast.makeText(this, String.format(getString(R.string.profile_imported_toast), name), Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, R.string.invalid_profile_toast, Toast.LENGTH_SHORT).show();

@@ -79,7 +79,8 @@ public class AnalogStick extends VirtualControllerElement {
                 // Critically damped (or slightly overdamped) spring physics
                 // Reduced omega for a slower, more deliberate return
                 float omega = 3.0f + _dynamicReturnSpeed * 7.0f;
-                float damping = 2.5f * omega; // Overdamped to eliminate "jiggles"
+                // Jiggleness reduces damping, allowing oscillation
+                float damping = (2.5f - _dynamicJiggleness * 2.0f) * omega; 
 
                 // Current normalized position
                 float range = radius_complete - radius_analog_stick;
@@ -435,12 +436,21 @@ public class AnalogStick extends VirtualControllerElement {
         if (isDynamicMode()) {
             if (!(isMouseMapping() || isCombinedMapping())) {
                 VirtualController.ControllerInputContext ctx = virtualController.getControllerInputContext();
+                
+                float totalSense = _sensitivity * _globalSensitivity;
+                float outX = x * totalSense;
+                float outY = y * totalSense;
+                
+                // Clamp to -1.0 to 1.0 range
+                if (outX > 1.0f) outX = 1.0f; else if (outX < -1.0f) outX = -1.0f;
+                if (outY > 1.0f) outY = 1.0f; else if (outY < -1.0f) outY = -1.0f;
+
                 if (_dynamicStickType == 0) { // Left Stick
-                    ctx.leftStickX = (short) (x * 0x7FFE);
-                    ctx.leftStickY = (short) (y * 0x7FFE);
+                    ctx.leftStickX = (short) (outX * 0x7FFE);
+                    ctx.leftStickY = (short) (outY * 0x7FFE);
                 } else { // Right Stick
-                    ctx.rightStickX = (short) (x * 0x7FFE);
-                    ctx.rightStickY = (short) (y * 0x7FFE);
+                    ctx.rightStickX = (short) (outX * 0x7FFE);
+                    ctx.rightStickY = (short) (outY * 0x7FFE);
                 }
                 virtualController.sendControllerInputContext();
             }
