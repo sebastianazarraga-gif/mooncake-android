@@ -79,8 +79,7 @@ public class AnalogStick extends VirtualControllerElement {
                 // Critically damped (or slightly overdamped) spring physics
                 // Reduced omega for a slower, more deliberate return
                 float omega = 3.0f + _dynamicReturnSpeed * 7.0f;
-                // Jiggleness reduces damping, allowing oscillation
-                float damping = (2.5f - _dynamicJiggleness * 2.0f) * omega; 
+                float damping = 2.5f * omega; // Overdamped to eliminate "jiggles"
 
                 // Current normalized position
                 float range = radius_complete - radius_analog_stick;
