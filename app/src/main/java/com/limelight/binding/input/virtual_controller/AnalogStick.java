@@ -75,7 +75,7 @@ public class AnalogStick extends VirtualControllerElement {
 
             boolean continueLoop = false;
 
-            if (!isPressed() && _isDynamicReturn && (movement_radius > 0 || Math.abs(velNX) > 0.001f || Math.abs(velNY) > 0.001f)) {
+            if (isDynamicModeActive() && !isPressed() && _isDynamicReturn && (movement_radius > 0 || Math.abs(velNX) > 0.001f || Math.abs(velNY) > 0.001f)) {
                 // Critically damped (or slightly overdamped) spring physics
                 // Reduced omega for a slower, more deliberate return
                 float omega = 3.0f + _dynamicReturnSpeed * 7.0f;
@@ -128,7 +128,7 @@ public class AnalogStick extends VirtualControllerElement {
                 // Output handling
                 // When in Dynamic Mode, the deadzone is removed for output
                 float outX, outY;
-                if (isDynamicMode()) {
+                if (isDynamicModeActive()) {
                     outX = nX;
                     outY = nY;
                 } else {
@@ -150,7 +150,7 @@ public class AnalogStick extends VirtualControllerElement {
                 invalidate();
                 
                 if (movement_radius > 0 || Math.abs(velNX) > 0.001f || Math.abs(velNY) > 0.001f) continueLoop = true;
-            } else if (isPressed() && isDynamicMode() && (isMouseMapping() || isCombinedMapping())) {
+            } else if (isDynamicModeActive() && isPressed() && (isMouseMapping() || isCombinedMapping())) {
                 // Continuous mouse reporting while held
                 float curY = (float) (Math.sin(movement_angle) * movement_radius);
                 float curX = (float) (Math.cos(movement_angle) * movement_radius);
@@ -201,7 +201,7 @@ public class AnalogStick extends VirtualControllerElement {
         ControllerHandler ch = virtualController.getControllerHandler();
         if (ch == null) return;
 
-        if (isDynamicMode()) return;
+        if (isDynamicModeActive()) return;
         if (!hasAnyDirectionalBinding()) return;
 
         // Standard mapping: Physically UP stick (pos y in logic) results in newU=true
@@ -337,7 +337,7 @@ public class AnalogStick extends VirtualControllerElement {
                     lastNX = 0; lastNY = 0;
 
                     virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
-                    if (isDynamicMode() && (isMouseMapping() || isCombinedMapping())) {
+                    if (isDynamicModeActive() && (isMouseMapping() || isCombinedMapping())) {
                         virtualController.getHandler().post(dynamicUpdateRunnable);
                     }
                 }
@@ -353,9 +353,16 @@ public class AnalogStick extends VirtualControllerElement {
                     updateDirectionalKeys(0, 0);
                 } else {
                     virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
-                    velNX *= 0.5f;
-                    velNY *= 0.5f;
-                    virtualController.getHandler().post(dynamicUpdateRunnable);
+                    if (isDynamicModeActive()) {
+                        velNX *= 0.5f;
+                        velNY *= 0.5f;
+                        virtualController.getHandler().post(dynamicUpdateRunnable);
+                    } else {
+                        stick_state = STICK_STATE.NO_MOVEMENT;
+                        movement_radius = 0;
+                        notifyOnMovement(0, 0);
+                        updateDirectionalKeys(0, 0);
+                    }
                 }
             }
         } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
@@ -369,9 +376,16 @@ public class AnalogStick extends VirtualControllerElement {
                     updateDirectionalKeys(0, 0);
                 } else {
                     virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
-                    velNX *= 0.5f;
-                    velNY *= 0.5f;
-                    virtualController.getHandler().post(dynamicUpdateRunnable);
+                    if (isDynamicModeActive()) {
+                        velNX *= 0.5f;
+                        velNY *= 0.5f;
+                        virtualController.getHandler().post(dynamicUpdateRunnable);
+                    } else {
+                        stick_state = STICK_STATE.NO_MOVEMENT;
+                        movement_radius = 0;
+                        notifyOnMovement(0, 0);
+                        updateDirectionalKeys(0, 0);
+                    }
                 }
             }
         }
@@ -415,7 +429,7 @@ public class AnalogStick extends VirtualControllerElement {
 
                 // When in Dynamic Mode, the deadzone is removed for output
                 float outX, outY;
-                if (isDynamicMode()) {
+                if (isDynamicModeActive()) {
                     outX = nX;
                     outY = nY;
                 } else {
@@ -432,7 +446,7 @@ public class AnalogStick extends VirtualControllerElement {
     }
 
     private void notifyOnMovement(float x, float y) {
-        if (isDynamicMode()) {
+        if (isDynamicModeActive()) {
             if (!(isMouseMapping() || isCombinedMapping())) {
                 VirtualController.ControllerInputContext ctx = virtualController.getControllerInputContext();
                 
@@ -458,6 +472,13 @@ public class AnalogStick extends VirtualControllerElement {
         if (!isDynamicMode() && !hasAnyDirectionalBinding()) return;
 
         for (AnalogStickListener l : listeners) l.onMovement(x, y);
+    }
+
+    @Override
+    protected void onMappingModeChanged() {
+        if (!isDynamicAllowed()) {
+            virtualController.getHandler().removeCallbacks(dynamicUpdateRunnable);
+        }
     }
     public interface AnalogStickListener { void onMovement(float x, float y); void onClick(); void onDoubleClick(); void onRevoke(); }
     public void addAnalogStickListener(AnalogStickListener listener) { listeners.add(listener); }

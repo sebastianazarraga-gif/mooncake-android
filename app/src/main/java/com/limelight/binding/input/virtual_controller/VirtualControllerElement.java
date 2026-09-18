@@ -389,6 +389,7 @@ public abstract class VirtualControllerElement extends View {
 
     public void setKeyboardMapping(boolean keyboardMapping) {
         _isKeyboardMapping = keyboardMapping;
+        onMappingModeChanged();
         invalidate();
     }
 
@@ -424,6 +425,7 @@ public abstract class VirtualControllerElement extends View {
 
     public void setMouseMapping(boolean mouseMapping) {
         _isMouseMapping = mouseMapping;
+        onMappingModeChanged();
         invalidate();
     }
 
@@ -433,12 +435,23 @@ public abstract class VirtualControllerElement extends View {
 
     public void setCombinedMapping(boolean combinedMapping) {
         _isCombinedMapping = combinedMapping;
+        onMappingModeChanged();
         invalidate();
     }
 
     public boolean isCombinedMapping() {
         return _isCombinedMapping;
     }
+
+    public boolean isDynamicAllowed() {
+        return !isKeyboardMapping() && !isCombinedMapping();
+    }
+
+    public boolean isDynamicModeActive() {
+        return isDynamicAllowed() && isDynamicMode();
+    }
+
+    protected void onMappingModeChanged() {}
 
     public void setMouseAction(MouseAction mouseAction) {
         _mouseAction = mouseAction;

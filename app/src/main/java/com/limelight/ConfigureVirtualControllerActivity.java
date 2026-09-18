@@ -975,36 +975,39 @@ public class ConfigureVirtualControllerActivity extends Activity {
     }
 
     private void updatePropertiesVisibility(VirtualControllerElement selected) {
-        boolean isStick = (selected instanceof AnalogStick) || (selected instanceof DigitalPad);
-        
-        dynamicModeCheckbox.setVisibility(isStick ? View.VISIBLE : View.GONE);
-        boolean dynamicOn = isStick && selected.isDynamicMode();
+        boolean isStick = (selected instanceof AnalogStick);
+        boolean isPad = (selected instanceof DigitalPad);
+        boolean isStickOrPad = isStick || isPad;
         
         int mode = selected.isCombinedMapping() ? 3 : (selected.isKeyboardMapping() ? 1 : (selected.isMouseMapping() ? 2 : 0));
+        boolean dynamicAllowed = isStick && (mode == 0 || mode == 2);
+        
+        dynamicModeCheckbox.setVisibility(dynamicAllowed ? View.VISIBLE : View.GONE);
+        boolean dynamicOn = dynamicAllowed && selected.isDynamicMode();
         
         // Dynamic Stick type selection (only for controller stick, not mouse)
-        boolean isControllerStick = isStick && (mode == 0 || mode == 3);
+        boolean isControllerStick = isStick && mode == 0;
         dynamicStickContainer.setVisibility(dynamicOn && isControllerStick ? View.VISIBLE : View.GONE);
         
-        dynamicReturnCheckbox.setVisibility(dynamicOn && isControllerStick ? View.VISIBLE : View.GONE);
-        boolean returnOn = dynamicOn && isControllerStick && selected.isDynamicReturn();
+        dynamicReturnCheckbox.setVisibility(dynamicOn ? View.VISIBLE : View.GONE);
+        boolean returnOn = dynamicOn && selected.isDynamicReturn();
         returnSpeedContainer.setVisibility(returnOn ? View.VISIBLE : View.GONE);
 
         // Mouse Static Return
-        boolean isMouseStick = isStick && (mode == 2 || mode == 3);
+        boolean isMouseStick = isStick && mode == 2;
         mouseStaticReturnCheckbox.setVisibility(dynamicOn && isMouseStick ? View.VISIBLE : View.GONE);
         
         boolean mouseReturnActive = dynamicOn && isMouseStick && selected.isMouseStaticReturn();
         mouseReturnProperties.setVisibility(mouseReturnActive ? View.VISIBLE : View.GONE);
 
-        directionalBindings.setVisibility(isStick && !dynamicOn ? View.VISIBLE : View.GONE);
+        directionalBindings.setVisibility(isStickOrPad && !dynamicOn ? View.VISIBLE : View.GONE);
         
         // Automation / Logic section
-        boolean orderingOn = !isStick && selected.isOrderingMode();
+        boolean orderingOn = !isStickOrPad && selected.isOrderingMode();
         boolean applyOnHold = orderingOn && selected.isApplyOnHold();
         boolean holdRepeatOn = applyOnHold && selected.isHoldRepeat();
 
-        orderingContainer.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        orderingContainer.setVisibility(!isStickOrPad ? View.VISIBLE : View.GONE);
         applyOnHoldCheckbox.setVisibility(orderingOn ? View.VISIBLE : View.GONE);
         holdRepeatContainer.setVisibility(applyOnHold ? View.VISIBLE : View.GONE);
         
@@ -1012,31 +1015,31 @@ public class ConfigureVirtualControllerActivity extends Activity {
         orderSettingsContainer.setVisibility(orderingOn && !holdRepeatOn ? View.VISIBLE : View.GONE);
         holdRepeatSettings.setVisibility(holdRepeatOn ? View.VISIBLE : View.GONE);
 
-        gpContainer.setVisibility(!isStick && (mode == 0 || mode == 3) ? View.VISIBLE : View.GONE);
-        kbdContainer.setVisibility(!isStick && (mode == 1 || mode == 3) ? View.VISIBLE : View.GONE);
-        msContainer.setVisibility(!isStick && (mode == 2 || mode == 3) ? View.VISIBLE : View.GONE);
+        gpContainer.setVisibility(!isStickOrPad && (mode == 0 || mode == 3) ? View.VISIBLE : View.GONE);
+        kbdContainer.setVisibility(!isStickOrPad && (mode == 1 || mode == 3) ? View.VISIBLE : View.GONE);
+        msContainer.setVisibility(!isStickOrPad && (mode == 2 || mode == 3) ? View.VISIBLE : View.GONE);
 
-        toggleModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
-        shiftModeCheckbox.setVisibility(!isStick && (mode == 1 || mode == 3) ? View.VISIBLE : View.GONE);
-        touchThroughCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
-        avoidConflictCheckbox.setVisibility(!isStick && selected.isTouchThrough() ? View.VISIBLE : View.GONE);
-        exclusiveTouchCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        toggleModeCheckbox.setVisibility(!isStickOrPad ? View.VISIBLE : View.GONE);
+        shiftModeCheckbox.setVisibility(!isStickOrPad && (mode == 1 || mode == 3) ? View.VISIBLE : View.GONE);
+        touchThroughCheckbox.setVisibility(!isStickOrPad ? View.VISIBLE : View.GONE);
+        avoidConflictCheckbox.setVisibility(!isStickOrPad && selected.isTouchThrough() ? View.VISIBLE : View.GONE);
+        exclusiveTouchCheckbox.setVisibility(!isStickOrPad ? View.VISIBLE : View.GONE);
         
         // Repeat mode should be available for all buttons (repeating while held)
         // or for toggle buttons (repeating while toggled).
-        repeatModeCheckbox.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        repeatModeCheckbox.setVisibility(!isStickOrPad ? View.VISIBLE : View.GONE);
         
         // Repeat settings are visible if repeat mode is enabled
-        boolean repeatOn = !isStick && selected.isRepeatMode();
+        boolean repeatOn = !isStickOrPad && selected.isRepeatMode();
         repeatContainer.setVisibility(repeatOn ? View.VISIBLE : View.GONE);
         activationContainer.setVisibility(repeatOn ? View.VISIBLE : View.GONE);
         
-        setCustomTextButton.setVisibility(!isStick ? View.VISIBLE : View.GONE);
+        setCustomTextButton.setVisibility(!isStickOrPad ? View.VISIBLE : View.GONE);
 
         bindingLabel.setVisibility(View.GONE);
         bindingSpinner.setVisibility(View.GONE);
-        sensitivityLabel.setVisibility(isStick ? View.VISIBLE : View.GONE);
-        findViewById(R.id.sensitivityContainer).setVisibility(isStick ? View.VISIBLE : View.GONE);
+        sensitivityLabel.setVisibility(isStickOrPad ? View.VISIBLE : View.GONE);
+        findViewById(R.id.sensitivityContainer).setVisibility(isStickOrPad ? View.VISIBLE : View.GONE);
     }
 
     private void updateBindingSpinner(String[] items) {
