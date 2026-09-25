@@ -151,6 +151,30 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="#FFFFFF" />
 
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Grid increment"
+                        android:textColor="#AAAAAA"
+                        android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/customValueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="20 px"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp" />
+                </LinearLayout>
+                <SeekBar
+                    android:id="@+id/Incrementslider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="20"
+                    android:layout_marginBottom="16dp" />
+
                 <LinearLayout
                     android:id="@+id/propertiesContainer"
                     android:layout_width="match_parent"
@@ -775,36 +799,63 @@
                         android:layout_marginBottom="8dp"
                         android:visibility="gone" />
 
-                    <LinearLayout
-                        android:id="@+id/returnSpeedContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone"
-                        android:layout_marginBottom="16dp">
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Return Speed"
-                                android:textColor="#AAAAAA"
-                                android:textSize="11sp" />
-                            <TextView
-                                android:id="@+id/returnSpeedValueText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0.50"
-                                android:textColor="#FFFFFF"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                        <SeekBar
-                            android:id="@+id/returnSpeedSlider"
+                        <LinearLayout
+                            android:id="@+id/returnSpeedContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:max="100"
-                            android:progress="50" />
-                    </LinearLayout>
+                            android:orientation="vertical"
+                            android:visibility="gone"
+                            android:layout_marginBottom="16dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Return Speed"
+                                    android:textColor="#AAAAAA"
+                                    android:textSize="11sp" />
+                                <TextView
+                                    android:id="@+id/returnSpeedValueText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0.50"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                            <SeekBar
+                                android:id="@+id/returnSpeedSlider"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:max="100"
+                                android:progress="50" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="8dp">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Jiggleness"
+                                    android:textColor="#AAAAAA"
+                                    android:textSize="11sp" />
+                                <TextView
+                                    android:id="@+id/jigglenessValueText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0.00"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                            <SeekBar
+                                android:id="@+id/jigglenessSlider"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:max="100"
+                                android:progress="0" />
+                        </LinearLayout>
 
                     <CheckBox
                         android:id="@+id/mouseStaticReturnCheckbox"

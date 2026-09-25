@@ -76,10 +76,14 @@ public class AnalogStick extends VirtualControllerElement {
             boolean continueLoop = false;
 
             if (isDynamicModeActive() && !isPressed() && _isDynamicReturn && (movement_radius > 0 || Math.abs(velNX) > 0.001f || Math.abs(velNY) > 0.001f)) {
-                // Critically damped (or slightly overdamped) spring physics
-                // Reduced omega for a slower, more deliberate return
+                // Return speed controls omega (frequency)
                 float omega = 3.0f + _dynamicReturnSpeed * 7.0f;
-                float damping = 2.5f * omega; // Overdamped to eliminate "jiggles"
+                
+                // Jiggleness controls damping ratio (zeta)
+                // 0.0 Jiggleness = 2.0 zeta (overdamped, very smooth)
+                // 1.0 Jiggleness = 0.4 zeta (underdamped, bouncy)
+                float zeta = 2.0f * (1.0f - _jiggleness * 0.8f);
+                float damping = zeta * omega;
 
                 // Current normalized position
                 float range = radius_complete - radius_analog_stick;

@@ -106,7 +106,7 @@ public class DigitalButton extends VirtualControllerElement {
                     // Press current key
                     if (currentActionIdx >= actionSequence.size()) currentActionIdx = 0;
                     executeAction(actionSequence.get(currentActionIdx), true);
-                    
+
                     // Transition to Release/Gap phase
                     currentAutoState = AutoState.GAPPING;
                     nextDelay = (_applyOnHold && _isHoldRepeat) ? _holdActivationTime : _orderActivationTime;
@@ -122,16 +122,16 @@ public class DigitalButton extends VirtualControllerElement {
                     if (shouldReleaseNow && currentActionIdx < actionSequence.size()) {
                         executeAction(actionSequence.get(currentActionIdx), false);
                     }
-                    
+
                     currentActionIdx++;
-                    
+
                     // Check if we finished the full list
                     if (currentActionIdx >= actionSequence.size()) {
                         currentActionIdx = 0; // Reset index for next cycle
-                        
+
                         // Decide if we loop
                         boolean shouldLoop = (_isRepeatMode && !_applyOnHold) || (_applyOnHold && _isHoldRepeat && buttonActive);
-                        
+
                         if (shouldLoop) {
                             currentAutoState = AutoState.LOOP_WAIT;
                             nextDelay = (_applyOnHold && _isHoldRepeat) ? _holdRepeatDelay : _orderGapTime;
@@ -302,7 +302,7 @@ public class DigitalButton extends VirtualControllerElement {
                     virtualController.getHandler().removeCallbacks(autoRepeatRunnable);
                     virtualController.getHandler().post(autoRepeatRunnable);
                 } else applyBindingState(true);
-                
+
                 if (isMouseMapping() || isCombinedMapping()) {
                     if (_mouseAction == MouseAction.MoveUp || _mouseAction == MouseAction.MoveDown ||
                         _mouseAction == MouseAction.MoveLeft || _mouseAction == MouseAction.MoveRight ||
@@ -378,12 +378,12 @@ public class DigitalButton extends VirtualControllerElement {
 
     private void onReleaseCallback() {
         _DBG("released");
-        
+
         if (_isOrderingMode && !_isToggled) {
             if (_applyOnHold) {
                 stopAutomation();
             }
-            return; 
+            return;
         }
 
         if (_isToggleMode) return;
@@ -565,11 +565,6 @@ public class DigitalButton extends VirtualControllerElement {
             }
         } catch (Exception e) { e.printStackTrace(); }
     }
-
-    @Override
-    public JSONObject getConfiguration() throws JSONException { JSONObject config = super.getConfiguration(); config.put("TEXT", text); return config; }
-    @Override
-    public void loadConfiguration(JSONObject configuration) throws JSONException { super.loadConfiguration(configuration); if (configuration.has("TEXT")) this.text = configuration.getString("TEXT"); }
 
     boolean inRange(float x, float y) {
         return (this.getX() < x && this.getX() + this.getWidth() > x) &&

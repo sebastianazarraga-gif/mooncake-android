@@ -146,6 +146,16 @@ public class VirtualController {
         return gridSnapping;
     }
 
+    private float customSliderValue = 20.0f; // Default starting value
+
+    public void setCustomSliderValue(float value) {
+        this.customSliderValue = value;
+    }
+
+    public float getCustomSliderValue() {
+        return customSliderValue;
+    }
+
     public VirtualController(final ControllerHandler controllerHandler, FrameLayout layout, final Context context) {
         this.controllerHandler = controllerHandler;
         this.frame_layout = layout;

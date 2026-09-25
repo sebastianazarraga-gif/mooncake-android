@@ -42,8 +42,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
     private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner, dynamicStickSpinner, mouseReturnTypeSpinner;
-    private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider, returnSpeedSlider;
-    private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText, returnSpeedValueText;
+    private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider, returnSpeedSlider, jigglenessSlider, customValueSlider;
+    private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText, returnSpeedValueText, jigglenessValueText, customValueText;
     private View dynamicStickContainer, returnSpeedContainer, mouseReturnProperties;
     private LinearLayout directionalBindings;
     private Button bindUp, bindDown, bindLeft, bindRight, setKeyboardButton, setGpButton, setMsButton, setCustomTextButton, resetButton, saveButton, removeSaveButton, importSaveButton, exportSaveButton;
@@ -358,6 +358,21 @@ public class ConfigureVirtualControllerActivity extends Activity {
         extraMsContainer = findViewById(R.id.extraMsContainer);
         
         setCustomTextButton = findViewById(R.id.setCustomTextButton);
+
+        customValueSlider = findViewById(R.id.Incrementslider);
+        customValueText = findViewById(R.id.customValueText);
+        if (customValueSlider != null && customValueText != null) {
+            customValueSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (isUpdatingUI) return;
+                    int gridSize = Math.max(1, progress);
+                    customValueText.setText(gridSize + " px");
+                    if (virtualController != null) virtualController.setCustomSliderValue((float) gridSize);
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
         toggleModeCheckbox = findViewById(R.id.toggleModeCheckbox);
         shiftModeCheckbox = findViewById(R.id.shiftModeCheckbox);
         touchThroughCheckbox = findViewById(R.id.touchThroughCheckbox);
@@ -397,6 +412,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         returnSpeedContainer = findViewById(R.id.returnSpeedContainer);
         returnSpeedSlider = findViewById(R.id.returnSpeedSlider);
         returnSpeedValueText = findViewById(R.id.returnSpeedValueText);
+        jigglenessSlider = findViewById(R.id.jigglenessSlider);
+        jigglenessValueText = findViewById(R.id.jigglenessValueText);
 
         mouseStaticReturnCheckbox = findViewById(R.id.mouseStaticReturnCheckbox);
         mouseReturnProperties = findViewById(R.id.mouseReturnProperties);
@@ -700,6 +717,21 @@ public class ConfigureVirtualControllerActivity extends Activity {
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
+        jigglenessSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (isUpdatingUI) return;
+                float val = (float) progress / 100.0f;
+                jigglenessValueText.setText(String.format(java.util.Locale.US, "%.2f", val));
+                VirtualControllerElement selected = virtualController.getSelectedElement();
+                if (selected != null && fromUser) {
+                    selected.setJiggleness(val);
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
         mouseStaticReturnCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isUpdatingUI) return;
             VirtualControllerElement selected = virtualController.getSelectedElement();
@@ -972,6 +1004,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
+
+        setupValueTextClickListeners();
     }
 
     private void updatePropertiesVisibility(VirtualControllerElement selected) {
@@ -1075,7 +1109,11 @@ public class ConfigureVirtualControllerActivity extends Activity {
         opacityValueText.setText(element.getOpacity() + "%");
 
         rotationSlider.setProgress((int) element.getRotation());
-        rotationValueText.setText((int) element.getRotation() + "°");
+        if (element.getRotation() == (int)element.getRotation()) {
+            rotationValueText.setText((int) element.getRotation() + "°");
+        } else {
+            rotationValueText.setText(String.format(java.util.Locale.US, "%.1f°", element.getRotation()));
+        }
 
         // Map 0.1-5.0 range back to 0-100 progress
         float sense = element.getSensitivity();
@@ -1089,6 +1127,8 @@ public class ConfigureVirtualControllerActivity extends Activity {
         dynamicReturnCheckbox.setChecked(element.isDynamicReturn());
         returnSpeedSlider.setProgress((int) (element.getDynamicReturnSpeed() * 100));
         returnSpeedValueText.setText(String.format(java.util.Locale.US, "%.2f", element.getDynamicReturnSpeed()));
+        jigglenessSlider.setProgress((int) (element.getJiggleness() * 100));
+        jigglenessValueText.setText(String.format(java.util.Locale.US, "%.2f", element.getJiggleness()));
 
         mouseStaticReturnCheckbox.setChecked(element.isMouseStaticReturn());
         mouseReturnTypeSpinner.setSelection(element.getMouseReturnType());
@@ -1446,6 +1486,102 @@ public class ConfigureVirtualControllerActivity extends Activity {
             if (orderGapUnitSpinner.getSelectedItemPosition() == 1) val *= 1000;
             selected.setOrderGapTime(val);
         } catch (Exception e) {}
+    }
+
+    private void setupValueTextClickListeners() {
+        widthValueText.setOnClickListener(v -> showNumericInputDialog("Width", widthSlider, 50, 550));
+        heightValueText.setOnClickListener(v -> showNumericInputDialog("Length", heightSlider, 50, 550));
+        opacityValueText.setOnClickListener(v -> showNumericInputDialog("Opacity", opacitySlider, 0, 100));
+        sensitivityValueText.setOnClickListener(v -> showNumericInputDialog("Sensitivity", sensitivitySlider, 0.1f, 5.0f));
+        rotationValueText.setOnClickListener(v -> showNumericInputDialog("Rotation", rotationSlider, 0, 360));
+        returnSpeedValueText.setOnClickListener(v -> showNumericInputDialog("Return Speed", returnSpeedSlider, 0.0f, 1.0f));
+        jigglenessValueText.setOnClickListener(v -> showNumericInputDialog("Jiggleness", jigglenessSlider, 0.0f, 1.0f));
+        if (customValueText != null && customValueSlider != null) {
+            customValueText.setOnClickListener(v -> showNumericInputDialog("Grid Increment (px)", customValueSlider, 1, 100));
+        }
+    }
+
+    private void showNumericInputDialog(String title, final SeekBar slider, final float min, final float max) {
+        final VirtualControllerElement selected = virtualController.getSelectedElement();
+        if (slider != customValueSlider && selected == null) return;
+
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        
+        String currentVal = "";
+        if (slider == customValueSlider) currentVal = String.valueOf(customValueSlider.getProgress());
+        else if (slider == widthSlider) currentVal = String.valueOf(((FrameLayout.LayoutParams)selected.getLayoutParams()).width);
+        else if (slider == heightSlider) currentVal = String.valueOf(((FrameLayout.LayoutParams)selected.getLayoutParams()).height);
+        else if (slider == opacitySlider) currentVal = String.valueOf(selected.getOpacity());
+        else if (slider == sensitivitySlider) currentVal = String.format(java.util.Locale.US, "%.2f", selected.getSensitivity());
+        else if (slider == rotationSlider) currentVal = String.format(java.util.Locale.US, "%.1f", selected.getRotation());
+        else if (slider == returnSpeedSlider) currentVal = String.format(java.util.Locale.US, "%.2f", selected.getDynamicReturnSpeed());
+        else if (slider == jigglenessSlider) currentVal = String.format(java.util.Locale.US, "%.2f", selected.getJiggleness());
+        
+        input.setText(currentVal);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Enter " + title)
+            .setView(input)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                try {
+                    String s = input.getText().toString();
+                    if (s.isEmpty()) return;
+                    float val = Float.parseFloat(s);
+                    if (val < min || val > max) {
+                        Toast.makeText(this, "Invalid number!", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    
+                    isUpdatingUI = true;
+                    if (slider == widthSlider || slider == heightSlider) {
+                        int iVal = (int)val;
+                        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) selected.getLayoutParams();
+                        if (slider == widthSlider) {
+                            lp.width = iVal;
+                            widthValueText.setText(String.valueOf(iVal));
+                            slider.setProgress((iVal - 50) / 5);
+                        } else {
+                            lp.height = iVal;
+                            heightValueText.setText(String.valueOf(iVal));
+                            slider.setProgress((iVal - 50) / 5);
+                        }
+                        selected.requestLayout();
+                    } else if (slider == opacitySlider) {
+                        int iVal = (int)val;
+                        selected.setOpacity(iVal);
+                        opacityValueText.setText(iVal + "%");
+                        slider.setProgress(iVal);
+                    } else if (slider == sensitivitySlider) {
+                        selected.setSensitivity(val);
+                        sensitivityValueText.setText(String.format(java.util.Locale.US, "%.2f", val));
+                        slider.setProgress((int) (((val - 0.1f) / 4.9f) * 100.0f));
+                    } else if (slider == rotationSlider) {
+                        selected.setRotation(val);
+                        if (val == (int)val) rotationValueText.setText((int)val + "°");
+                        else rotationValueText.setText(String.format(java.util.Locale.US, "%.1f°", val));
+                        slider.setProgress((int) val);
+                    } else if (slider == returnSpeedSlider) {
+                        selected.setDynamicReturnSpeed(val);
+                        returnSpeedValueText.setText(String.format(java.util.Locale.US, "%.2f", val));
+                        slider.setProgress((int)(val * 100));
+                    } else if (slider == jigglenessSlider) {
+                        selected.setJiggleness(val);
+                        jigglenessValueText.setText(String.format(java.util.Locale.US, "%.2f", val));
+                        slider.setProgress((int)(val * 100));
+                    } else if (slider == customValueSlider) {
+                        int gridSize = Math.max(1, (int) val);
+                        if (customValueText != null) customValueText.setText(gridSize + " px");
+                        slider.setProgress(gridSize);
+                        if (virtualController != null) virtualController.setCustomSliderValue((float) gridSize);
+                    }
+                    isUpdatingUI = false;
+                } catch (Exception e) {
+                    Toast.makeText(this, "Invalid number!", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
     }
 
     private void updateSavesSpinner() {

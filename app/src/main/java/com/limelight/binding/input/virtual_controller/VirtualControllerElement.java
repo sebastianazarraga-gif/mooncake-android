@@ -122,6 +122,7 @@ public abstract class VirtualControllerElement extends View {
     protected boolean _avoidTouchThroughConflict = false;
     protected boolean _isDynamicReturn = false;
     protected float _dynamicReturnSpeed = 0.5f;
+    protected float _jiggleness = 0.0f;
 
     protected boolean _isMouseStaticReturn = false;
     protected int _mouseReturnType = 0; // 0 = All the time, 1 = Only when touched
@@ -154,9 +155,12 @@ public abstract class VirtualControllerElement extends View {
         int newPos_y = (int) getY() + y - pressed_y;
 
         if (virtualController.isGridSnapping()) {
-            int gridSize = 20;
-            newPos_x = (newPos_x / gridSize) * gridSize;
-            newPos_y = (newPos_y / gridSize) * gridSize;
+            // 👈 USE YOUR SLIDER VALUE HERE:
+            int gridSize = (int) (virtualController.getCustomSliderValue());
+            if (gridSize > 0) {
+                newPos_x = (newPos_x / gridSize) * gridSize;
+                newPos_y = (newPos_y / gridSize) * gridSize;
+            }
         }
 
         if (newPos_x < 0) newPos_x = 0;
@@ -573,6 +577,9 @@ public abstract class VirtualControllerElement extends View {
 
     public void setRotation(float rotation) {
         _rotation = rotation;
+        setPivotX(getWidth() / 2f);
+        setPivotY(getHeight() / 2f);
+        super.setRotation(rotation);
         invalidate();
     }
 
@@ -716,6 +723,14 @@ public abstract class VirtualControllerElement extends View {
         return _dynamicReturnSpeed;
     }
 
+    public void setJiggleness(float jiggleness) {
+        _jiggleness = jiggleness;
+    }
+
+    public float getJiggleness() {
+        return _jiggleness;
+    }
+
     public void setMouseStaticReturn(boolean enabled) {
         _isMouseStaticReturn = enabled;
     }
@@ -842,6 +857,7 @@ public abstract class VirtualControllerElement extends View {
         configuration.put("DYN_TYPE", _dynamicStickType);
         configuration.put("DYN_RET", _isDynamicReturn);
         configuration.put("DYN_RET_SPD", _dynamicReturnSpeed);
+        configuration.put("JIGGLE", _jiggleness);
         configuration.put("MS_STAT_RET", _isMouseStaticReturn);
         configuration.put("MS_RET_TYPE", _mouseReturnType);
 
@@ -981,6 +997,7 @@ public abstract class VirtualControllerElement extends View {
         _dynamicStickType = configuration.optInt("DYN_TYPE", 0);
         _isDynamicReturn = configuration.optBoolean("DYN_RET", false);
         _dynamicReturnSpeed = (float) configuration.optDouble("DYN_RET_SPD", 0.5);
+        _jiggleness = (float) configuration.optDouble("JIGGLE", 0.0);
         _isMouseStaticReturn = configuration.optBoolean("MS_STAT_RET", false);
         _mouseReturnType = configuration.optInt("MS_RET_TYPE", 0);
 
