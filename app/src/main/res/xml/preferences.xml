@@ -283,6 +283,37 @@
             android:summary="@string/summary_enable_post_stream_toast"
             android:defaultValue="false"/>
     </PreferenceCategory>
+    <PreferenceCategory
+        android:key="themes"
+        android:title="@string/themes">
+        <CheckBoxPreference
+            android:key="checkbox_transparent_header"
+            android:title="Make header transparent"
+            android:summary="Makes the top header background transparent"
+            android:defaultValue="false" />
+        <Preference
+            android:key="button_change_header_color"
+            android:title="Change header color"
+            android:summary="Pick a custom color for the top header bar." />
+        <CheckBoxPreference
+            android:key="checkbox_transparent_nav"
+            android:title="Make bottom navigation transparent"
+            android:summary="Makes the bottom navigation bar transparent"
+            android:defaultValue="false" />
+        <Preference
+            android:key="button_change_nav_color"
+            android:title="Change bottom navigation color"
+            android:summary="Pick a custom color for the bottom navigation bar." />
+        <Preference
+            android:key="Button_themes"
+            android:title="Open Gallery &amp; Set Background"
+            android:summary="Opens your phone gallery to choose and crop photo for the theme background."/>
+        <Preference
+            android:key="button_reset_theme"
+            android:title="Reset Themes"
+            android:summary="Revert Theme configurations back to normal."/>
+    </PreferenceCategory>
+
     <!--PreferenceCategory android:title="@string/category_help"
         android:key="category_help">
         <com.limelight.preferences.WebLauncherPreference

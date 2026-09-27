@@ -14,7 +14,7 @@
     <string name="help_option_troubleshoot">Moonlight Troubleshooting Guide</string>
     <string name="help_option_setup">Moonlight Setup Guide</string>
     <string name="help_option_youtube">Mooncake YouTube</string>
-
+    <string name="Mooncake_wiki">Mooncake Wiki</string>
     <!-- PC view menu entries -->
     <string name="pcview_menu_header_online">Online</string>
     <string name="pcview_menu_header_offline">Offline</string>
@@ -120,7 +120,10 @@
     <string name="perf_overlay_netdrops">Frames dropped by your network connection: %1$.2f%%</string>
     <string name="perf_overlay_netlatency">Average network latency: %1$d ms (variance: %2$d ms)</string>
     <string name="perf_overlay_dectime">Average decoding time: %1$.2f ms</string>
-
+    <string name="welcome_dialog_title">Welcome to Mooncake!, New here?</string>
+    <string name="welcome_dialog_message">Recommended to check the available help if your new!</string>
+    <string name="welcome_check_wiki">Check Help &amp; Wiki</string>
+    <string name="welcome_close">Close</string>
     <!-- AppList activity -->
     <string name="applist_connect_msg">Connecting to PC…</string>
     <string name="applist_menu_resume">Resume Session</string>
@@ -174,7 +177,7 @@
     <string name="summary_audio_config_list">Enable 5.1 or 7.1 surround sound for home-theater systems</string>
     <string name="title_checkbox_enable_audiofx">Enable system equalizer support</string>
     <string name="summary_checkbox_enable_audiofx">Allows audio effects to function while streaming, but may increase audio latency</string>
-
+    <string name="themes">Themes</string>
     <string name="category_gamepad_settings">Gamepad Settings</string>
     <string name="title_checkbox_multi_controller">Automatic gamepad presence detection</string>
     <string name="summary_checkbox_multi_controller">Unchecking this option forces a gamepad to always be present</string>

@@ -9,6 +9,7 @@ import android.app.UiModeManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.content.res.Configuration;
 import android.graphics.Insets;
 import android.os.Build;
@@ -218,6 +219,8 @@ public class UiHelper {
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
 
+        applyCustomThemeBackground(activity);
+
         if (modeMgr.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
             // Increase view padding on TVs
             float scale = activity.getResources().getDisplayMetrics().density;
@@ -375,11 +378,113 @@ public class UiHelper {
                         View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
             }
         }
+
+        applyCustomThemeBackground(activity);
+    }
+
+    public static void applyCustomThemeBackground(Activity activity) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+            return;
+        }
+
+        View rootView = activity.findViewById(android.R.id.content);
+        java.io.File customBg = new java.io.File(activity.getFilesDir(), "custom_theme_bg.jpg");
+        if (customBg.exists() && customBg.length() > 0) {
+            try {
+                android.graphics.drawable.Drawable drawable = android.graphics.drawable.Drawable.createFromPath(customBg.getAbsolutePath());
+                if (drawable != null) {
+                    activity.getWindow().setBackgroundDrawable(drawable);
+                    if (rootView != null) {
+                        rootView.setBackground(drawable);
+                        if (rootView instanceof android.view.ViewGroup && ((android.view.ViewGroup) rootView).getChildCount() > 0) {
+                            View inflatedLayoutRoot = ((android.view.ViewGroup) rootView).getChildAt(0);
+                            if (inflatedLayoutRoot != null) {
+                                inflatedLayoutRoot.setBackground(null);
+                            }
+                        }
+                    }
+                    applyHeaderTheme(activity);
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Restore default gradient when custom theme image is reset/deleted
+        activity.getWindow().setBackgroundDrawableResource(R.drawable.main_background_gradient);
+        if (rootView != null) {
+            rootView.setBackgroundResource(R.drawable.main_background_gradient);
+            if (rootView instanceof android.view.ViewGroup && ((android.view.ViewGroup) rootView).getChildCount() > 0) {
+                View inflatedLayoutRoot = ((android.view.ViewGroup) rootView).getChildAt(0);
+                if (inflatedLayoutRoot != null) {
+                    inflatedLayoutRoot.setBackgroundResource(R.drawable.main_background_gradient);
+                }
+            }
+        }
+
+        applyHeaderTheme(activity);
+        applyNavTheme(activity);
+    }
+
+    public static void applyHeaderTheme(Activity activity) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+            return;
+        }
+        View headerLayout = activity.findViewById(R.id.headerLayout);
+        if (headerLayout == null) {
+            return;
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        boolean isTransparent = prefs.getBoolean("checkbox_transparent_header", false);
+
+        if (isTransparent) {
+            headerLayout.setBackgroundColor(Color.TRANSPARENT);
+            headerLayout.setElevation(0f);
+        } else {
+            int customColor = prefs.getInt("theme_header_color", 0xFF0D001A);
+            headerLayout.setBackgroundColor(customColor);
+            headerLayout.setElevation(4f * activity.getResources().getDisplayMetrics().density);
+        }
+    }
+
+    public static void applyNavTheme(Activity activity) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+            return;
+        }
+        View bottomNav = activity.findViewById(R.id.bottom_nav_bar);
+        if (bottomNav == null) {
+            return;
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        boolean isTransparent = prefs.getBoolean("checkbox_transparent_nav", false);
+
+        if (isTransparent) {
+            bottomNav.setBackgroundColor(Color.TRANSPARENT);
+            bottomNav.setElevation(0f);
+        } else {
+            if (prefs.contains("theme_nav_color")) {
+                int customColor = prefs.getInt("theme_nav_color", 0xFF0D001A);
+                android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+                gd.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                gd.setColor(customColor);
+                float radius = 20f * activity.getResources().getDisplayMetrics().density;
+                gd.setCornerRadii(new float[]{radius, radius, radius, radius, 0, 0, 0, 0});
+                bottomNav.setBackground(gd);
+            } else {
+                bottomNav.setBackgroundResource(R.drawable.navigation);
+            }
+            bottomNav.setElevation(8f * activity.getResources().getDisplayMetrics().density);
+        }
     }
 
     public static void setupBottomNav(final Activity activity, int selectedTabIndex) {
         View bottomNav = activity.findViewById(R.id.bottom_nav_bar);
         if (bottomNav == null) return;
+
+        applyNavTheme(activity);
 
         LinearLayout computersTab = activity.findViewById(R.id.nav_computers);
         LinearLayout settingsTab = activity.findViewById(R.id.nav_settings);

@@ -17,6 +17,8 @@ import java.util.Comparator;
 
 public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
+    public static final PcView.ComputerObject ADD_PC_DUMMY = new PcView.ComputerObject("Add PC", true);
+
     public PcGridAdapter(Context context, PreferenceConfiguration prefs) {
         super(context, getLayoutIdForPreferences(prefs));
     }
@@ -49,7 +51,54 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
     }
 
     @Override
+    public int getCount() {
+        if (getLayoutId() == R.layout.pc_list_item) {
+            return itemList.size();
+        }
+        return itemList.size() + 1;
+    }
+
+    public int getPcCount() {
+        return itemList.size();
+    }
+
+    @Override
+    public Object getItem(int i) {
+        if (i < itemList.size()) {
+            return itemList.get(i);
+        }
+        return ADD_PC_DUMMY;
+    }
+
+    @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
+        if (obj == ADD_PC_DUMMY || (obj != null && obj.isAddPcPlaceholder)) {
+            imgView.setImageResource(R.drawable.ic_add_computer);
+            imgView.setAlpha(1.0f);
+
+            prgView.setVisibility(View.INVISIBLE);
+            txtView.setText("Add PC");
+            txtView.setAlpha(1.0f);
+            overlayView.setVisibility(View.GONE);
+
+            TextView statusText = parentView.findViewById(R.id.pc_status_text);
+            if (statusText != null) statusText.setVisibility(View.GONE);
+
+            TextView ipAddress = parentView.findViewById(R.id.pc_ip_address);
+            if (ipAddress != null) ipAddress.setVisibility(View.GONE);
+
+            TextView controllerProfile = parentView.findViewById(R.id.pc_controller_profile);
+            if (controllerProfile != null) controllerProfile.setVisibility(View.GONE);
+
+            TextView playButton = parentView.findViewById(R.id.play_button_text);
+            if (playButton != null) playButton.setVisibility(View.GONE);
+
+            TextView latencyText = parentView.findViewById(R.id.pc_latency);
+            if (latencyText != null) latencyText.setVisibility(View.GONE);
+
+            return;
+        }
+
         imgView.setImageResource(R.drawable.ic_computer);
         if (obj.details.state == ComputerDetails.State.ONLINE) {
             imgView.setAlpha(1.0f);

@@ -35,6 +35,10 @@ public abstract class GenericGridAdapter<T> extends BaseAdapter {
         }
     }
 
+    public int getLayoutId() {
+        return layoutId;
+    }
+
     public void clear() {
         itemList.clear();
     }
@@ -67,7 +71,7 @@ public abstract class GenericGridAdapter<T> extends BaseAdapter {
         TextView txtView = convertView.findViewById(R.id.grid_text);
         ProgressBar prgView = convertView.findViewById(R.id.grid_spinner);
 
-        populateView(convertView, imgView, prgView, txtView, overlayView, itemList.get(i));
+        populateView(convertView, imgView, prgView, txtView, overlayView, (T) getItem(i));
 
         return convertView;
     }

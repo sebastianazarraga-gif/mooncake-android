@@ -38,6 +38,7 @@ import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
@@ -171,6 +172,23 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
         ImageButton controllerButton = findViewById(R.id.controllerButton);
         ImageButton gridToggle = findViewById(R.id.grid_toggle);
 
+        SharedPreferences firstRunPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isFirstRun = firstRunPrefs.getBoolean("is_first_run", true);
+
+        if (isFirstRun) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.welcome_dialog_title)
+                    .setMessage(R.string.welcome_dialog_message)
+                    .setPositiveButton(R.string.welcome_check_wiki, (dialog, which) -> {
+                        showHelpDialog();
+                    })
+                    .setNegativeButton(R.string.welcome_close, null)
+                    .show();
+
+            // Mark first run as completed
+            firstRunPrefs.edit().putBoolean("is_first_run", false).apply();
+        }
+
         if (gridToggle != null) {
             gridToggle.setActivated(isListView);
             gridToggle.setOnClickListener(new OnClickListener() {
@@ -208,30 +226,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 startActivity(i);
             }
         });
-        helpButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final String[] options = {
-                        getString(R.string.help_option_troubleshoot),
-                        getString(R.string.help_option_setup),
-                        getString(R.string.help_option_youtube)
-                };
-
-                new AlertDialog.Builder(PcView.this)
-                        .setTitle(R.string.help_dialog_title)
-                        .setItems(options, (dialog, which) -> {
-                            if (which == 0) {
-                                HelpLauncher.launchTroubleshooting(PcView.this);
-                            } else if (which == 1) {
-                                HelpLauncher.launchSetupGuide(PcView.this);
-                            } else if (which == 2) {
-                                HelpLauncher.launchYoutube(PcView.this);
-                            }
-                        })
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show();
-            }
-        });
+        helpButton.setOnClickListener(v -> showHelpDialog());
         controllerButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -251,7 +246,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             .commitAllowingStateLoss();
 
         noPcFoundLayout = findViewById(R.id.no_pc_found_layout);
-        if (pcGridAdapter.getCount() == 0) {
+        if (pcGridAdapter.getPcCount() == 0) {
             noPcFoundLayout.setVisibility(View.VISIBLE);
         }
         else {
@@ -260,6 +255,31 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
            pcGridAdapter.notifyDataSetChanged();
 
         UiHelper.setupBottomNav(this, 0);
+    }
+
+    private void showHelpDialog() {
+        final String[] options = {
+                getString(R.string.help_option_troubleshoot),
+                getString(R.string.help_option_setup),
+                getString(R.string.help_option_youtube),
+                getString(R.string.Mooncake_wiki),
+        };
+
+        new AlertDialog.Builder(PcView.this)
+                .setTitle(R.string.help_dialog_title)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        HelpLauncher.launchTroubleshooting(PcView.this);
+                    } else if (which == 1) {
+                        HelpLauncher.launchSetupGuide(PcView.this);
+                    } else if (which == 2) {
+                        HelpLauncher.launchYoutube(PcView.this);
+                    } else if (which == 3) {
+                        HelpLauncher.launchWiki(PcView.this);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     @Override
@@ -420,6 +440,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
         ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(info.position);
+
+        if (computer == PcGridAdapter.ADD_PC_DUMMY || (computer != null && computer.isAddPcPlaceholder)) {
+            menu.clear();
+            return;
+        }
 
         // Add a header with PC status details
         menu.clearHeader();
@@ -690,6 +715,9 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     public boolean onContextItemSelected(MenuItem item) {
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
         final ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(info.position);
+        if (computer == PcGridAdapter.ADD_PC_DUMMY || (computer != null && computer.isAddPcPlaceholder)) {
+            return true;
+        }
         switch (item.getItemId()) {
             case PAIR_ID:
                 doPair(computer.details);
@@ -777,10 +805,10 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 .remove(details.uuid)
                 .apply();
 
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
+        for (int i = 0; i < pcGridAdapter.getPcCount(); i++) {
             ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
 
-            if (details.equals(computer.details)) {
+            if (computer.details != null && details.equals(computer.details)) {
                 // Disable or delete shortcuts referencing this PC
                 shortcutHelper.disableComputerShortcut(details,
                         getResources().getString(R.string.scut_deleted_pc));
@@ -788,7 +816,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
                 pcGridAdapter.removeComputer(computer);
                 pcGridAdapter.notifyDataSetChanged();
 
-                if (pcGridAdapter.getCount() == 0) {
+                if (pcGridAdapter.getPcCount() == 0) {
                     // Show the "Discovery in progress" view
                     noPcFoundLayout.setVisibility(View.VISIBLE);
                 }
@@ -801,11 +829,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
     private void updateComputer(ComputerDetails details) {
         ComputerObject existingEntry = null;
 
-        for (int i = 0; i < pcGridAdapter.getCount(); i++) {
+        for (int i = 0; i < pcGridAdapter.getPcCount(); i++) {
             ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(i);
 
             // Check if this is the same computer
-            if (details.uuid.equals(computer.details.uuid)) {
+            if (computer.details != null && details.uuid.equals(computer.details.uuid)) {
                 existingEntry = computer;
                 break;
             }
@@ -847,6 +875,11 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
                                     long id) {
                 ComputerObject computer = (ComputerObject) pcGridAdapter.getItem(pos);
+                if (computer == PcGridAdapter.ADD_PC_DUMMY || (computer != null && computer.isAddPcPlaceholder)) {
+                    Intent i = new Intent(PcView.this, AddComputerManually.class);
+                    startActivity(i);
+                    return;
+                }
                 if (computer.details.state == ComputerDetails.State.UNKNOWN ||
                     computer.details.state == ComputerDetails.State.OFFLINE) {
                     // Open the context menu if a PC is offline or refreshing
@@ -873,6 +906,7 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
 
     public static class ComputerObject {
         public ComputerDetails details;
+        public boolean isAddPcPlaceholder = false;
 
         public ComputerObject(ComputerDetails details) {
             if (details == null) {
@@ -881,9 +915,15 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             this.details = details;
         }
 
+        public ComputerObject(String dummyName, boolean isAddPc) {
+            this.details = new ComputerDetails();
+            this.details.name = dummyName;
+            this.isAddPcPlaceholder = isAddPc;
+        }
+
         @Override
         public String toString() {
-            return details.name;
+            return details != null ? details.name : "";
         }
     }
 }

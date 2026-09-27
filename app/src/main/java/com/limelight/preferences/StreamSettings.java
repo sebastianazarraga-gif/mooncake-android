@@ -10,6 +10,7 @@ import android.media.MediaCodecInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Handler;
 import android.os.Vibrator;
 import android.preference.CheckBoxPreference;
@@ -21,12 +22,21 @@ import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
 import android.util.DisplayMetrics;
 import android.util.Range;
+import android.graphics.Color;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Display;
 import android.view.DisplayCutout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import android.widget.Toast;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
@@ -41,6 +51,9 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 
 public class StreamSettings extends Activity {
+    public static final int REQUEST_PICK_THEME_IMAGE = 3001;
+    public static final int REQUEST_CROP_THEME_IMAGE = 3002;
+
     private PreferenceConfiguration previousPrefs;
     private int previousDisplayPixelCount;
 
@@ -165,6 +178,52 @@ public class StreamSettings extends Activity {
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent, null);
             }
+        }
+    }
+
+    public void copyUriToThemeFile(android.net.Uri uri) {
+        try (java.io.InputStream is = getContentResolver().openInputStream(uri);
+             java.io.FileOutputStream fos = new java.io.FileOutputStream(new java.io.File(getFilesDir(), "custom_theme_bg.jpg"))) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = is.read(buffer)) != -1) {
+                fos.write(buffer, 0, read);
+            }
+            Toast.makeText(this, "Theme background updated!", Toast.LENGTH_SHORT).show();
+            UiHelper.notifyNewRootView(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Failed to update theme background", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != Activity.RESULT_OK) return;
+
+        if (requestCode == REQUEST_PICK_THEME_IMAGE && data != null && data.getData() != null) {
+            android.net.Uri sourceUri = data.getData();
+            try {
+                java.io.File croppedFile = new java.io.File(getFilesDir(), "custom_theme_bg.jpg");
+                Intent cropIntent = new Intent("com.android.camera.action.CROP");
+                cropIntent.setDataAndType(sourceUri, "image/*");
+                cropIntent.putExtra("crop", "true");
+                cropIntent.putExtra("aspectX", 16);
+                cropIntent.putExtra("aspectY", 9);
+                cropIntent.putExtra("scale", true);
+                cropIntent.putExtra("return-data", false);
+                cropIntent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, android.net.Uri.fromFile(croppedFile));
+                cropIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+                startActivityForResult(cropIntent, REQUEST_CROP_THEME_IMAGE);
+            } catch (Exception e) {
+                // If crop activity is not available on device, copy image directly
+                copyUriToThemeFile(sourceUri);
+            }
+        } else if (requestCode == REQUEST_CROP_THEME_IMAGE) {
+            Toast.makeText(this, "Theme background updated!", Toast.LENGTH_SHORT).show();
+            UiHelper.notifyNewRootView(this);
         }
     }
 
@@ -730,6 +789,227 @@ public class StreamSettings extends Activity {
                     return true;
                 }
             });
+
+            Preference btnThemes = findPreference("Button_themes");
+            if (btnThemes != null) {
+                btnThemes.setOnPreferenceClickListener(preference -> {
+                    if (getActivity() != null) {
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_PICK);
+                            intent.setDataAndType(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
+                            getActivity().startActivityForResult(Intent.createChooser(intent, "Select Background Image"), REQUEST_PICK_THEME_IMAGE);
+                        } catch (Exception e) {
+                            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                            intent.setType("image/*");
+                            getActivity().startActivityForResult(Intent.createChooser(intent, "Select Background Image"), REQUEST_PICK_THEME_IMAGE);
+                        }
+                    }
+                    return true;
+                });
+            }
+
+            CheckBoxPreference chkTransparentHeader = (CheckBoxPreference) findPreference("checkbox_transparent_header");
+            Preference btnChangeHeaderColor = findPreference("button_change_header_color");
+
+            if (chkTransparentHeader != null && btnChangeHeaderColor != null) {
+                btnChangeHeaderColor.setEnabled(!chkTransparentHeader.isChecked());
+
+                chkTransparentHeader.setOnPreferenceChangeListener((preference, newValue) -> {
+                    boolean isTransparent = (Boolean) newValue;
+                    btnChangeHeaderColor.setEnabled(!isTransparent);
+                    new Handler().post(() -> {
+                        if (getActivity() != null) {
+                            UiHelper.applyHeaderTheme(getActivity());
+                        }
+                    });
+                    return true;
+                });
+            }
+
+            if (btnChangeHeaderColor != null) {
+                btnChangeHeaderColor.setOnPreferenceClickListener(preference -> {
+                    showColorPicker("Header Color Picker", "theme_header_color", () -> {
+                        if (getActivity() != null) UiHelper.applyHeaderTheme(getActivity());
+                    });
+                    return true;
+                });
+            }
+
+            CheckBoxPreference chkTransparentNav = (CheckBoxPreference) findPreference("checkbox_transparent_nav");
+            Preference btnChangeNavColor = findPreference("button_change_nav_color");
+
+            if (chkTransparentNav != null && btnChangeNavColor != null) {
+                btnChangeNavColor.setEnabled(!chkTransparentNav.isChecked());
+
+                chkTransparentNav.setOnPreferenceChangeListener((preference, newValue) -> {
+                    boolean isTransparent = (Boolean) newValue;
+                    btnChangeNavColor.setEnabled(!isTransparent);
+                    new Handler().post(() -> {
+                        if (getActivity() != null) {
+                            UiHelper.applyNavTheme(getActivity());
+                        }
+                    });
+                    return true;
+                });
+            }
+
+            if (btnChangeNavColor != null) {
+                btnChangeNavColor.setOnPreferenceClickListener(preference -> {
+                    showColorPicker("Bottom Navigation Color Picker", "theme_nav_color", () -> {
+                        if (getActivity() != null) UiHelper.applyNavTheme(getActivity());
+                    });
+                    return true;
+                });
+            }
+
+            Preference btnResetTheme = findPreference("button_reset_theme");
+            if (btnResetTheme != null) {
+                btnResetTheme.setOnPreferenceClickListener(preference -> {
+                    if (getActivity() != null) {
+                        java.io.File customBg = new java.io.File(getActivity().getFilesDir(), "custom_theme_bg.jpg");
+                        if (customBg.exists()) {
+                            customBg.delete();
+                        }
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                        prefs.edit()
+                                .remove("theme_header_color")
+                                .remove("checkbox_transparent_header")
+                                .remove("theme_nav_color")
+                                .remove("checkbox_transparent_nav")
+                                .apply();
+                        if (chkTransparentHeader != null) chkTransparentHeader.setChecked(false);
+                        if (btnChangeHeaderColor != null) btnChangeHeaderColor.setEnabled(true);
+                        if (chkTransparentNav != null) chkTransparentNav.setChecked(false);
+                        if (btnChangeNavColor != null) btnChangeNavColor.setEnabled(true);
+
+                        Toast.makeText(getActivity(), "Theme background & headers reset to default!", Toast.LENGTH_SHORT).show();
+                        UiHelper.applyCustomThemeBackground(getActivity());
+                    }
+                    return true;
+                });
+            }
+        }
+
+        private void showColorPicker(String title, String prefKey, Runnable onApplied) {
+            Activity activity = getActivity();
+            if (activity == null) return;
+
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+            int initialColor = prefs.getInt(prefKey, 0xFF0D001A);
+
+            LinearLayout container = new LinearLayout(activity);
+            container.setOrientation(LinearLayout.VERTICAL);
+            int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
+            container.setPadding(pad, pad, pad, pad);
+
+            // Live Color Preview Box
+            View previewView = new View(activity);
+            LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, (int) (50 * activity.getResources().getDisplayMetrics().density));
+            previewParams.bottomMargin = pad;
+            previewView.setLayoutParams(previewParams);
+            previewView.setBackgroundColor(initialColor);
+            container.addView(previewView);
+
+            // Hex Input
+            EditText hexInput = new EditText(activity);
+            hexInput.setHint("#AARRGGBB");
+            hexInput.setText(String.format("#%08X", initialColor));
+            hexInput.setInputType(InputType.TYPE_CLASS_TEXT);
+            container.addView(hexInput);
+
+            int a = Color.alpha(initialColor);
+            int r = Color.red(initialColor);
+            int g = Color.green(initialColor);
+            int b = Color.blue(initialColor);
+
+            TextView alphaLabel = new TextView(activity);
+            SeekBar alphaSeek = new SeekBar(activity);
+            alphaSeek.setMax(255);
+            alphaSeek.setProgress(a);
+
+            TextView redLabel = new TextView(activity);
+            SeekBar redSeek = new SeekBar(activity);
+            redSeek.setMax(255);
+            redSeek.setProgress(r);
+
+            TextView greenLabel = new TextView(activity);
+            SeekBar greenSeek = new SeekBar(activity);
+            greenSeek.setMax(255);
+            greenSeek.setProgress(g);
+
+            TextView blueLabel = new TextView(activity);
+            SeekBar blueSeek = new SeekBar(activity);
+            blueSeek.setMax(255);
+            blueSeek.setProgress(b);
+
+            final boolean[] isUpdating = {false};
+            Runnable updateColor = () -> {
+                if (isUpdating[0]) return;
+                int color = Color.argb(alphaSeek.getProgress(), redSeek.getProgress(), greenSeek.getProgress(), blueSeek.getProgress());
+                previewView.setBackgroundColor(color);
+                alphaLabel.setText("Opacity: " + (alphaSeek.getProgress() * 100 / 255) + "%");
+                redLabel.setText("Red: " + redSeek.getProgress());
+                greenLabel.setText("Green: " + greenSeek.getProgress());
+                blueLabel.setText("Blue: " + blueSeek.getProgress());
+                isUpdating[0] = true;
+                hexInput.setText(String.format("#%08X", color));
+                isUpdating[0] = false;
+            };
+
+            SeekBar.OnSeekBarChangeListener listener = new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) { updateColor.run(); }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            };
+
+            alphaSeek.setOnSeekBarChangeListener(listener);
+            redSeek.setOnSeekBarChangeListener(listener);
+            greenSeek.setOnSeekBarChangeListener(listener);
+            blueSeek.setOnSeekBarChangeListener(listener);
+
+            hexInput.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override public void afterTextChanged(Editable s) {
+                    if (isUpdating[0]) return;
+                    try {
+                        String hex = s.toString().trim();
+                        if (!hex.startsWith("#")) hex = "#" + hex;
+                        int parsed = Color.parseColor(hex);
+                        isUpdating[0] = true;
+                        alphaSeek.setProgress(Color.alpha(parsed));
+                        redSeek.setProgress(Color.red(parsed));
+                        greenSeek.setProgress(Color.green(parsed));
+                        blueSeek.setProgress(Color.blue(parsed));
+                        previewView.setBackgroundColor(parsed);
+                        isUpdating[0] = false;
+                    } catch (Exception ignored) {}
+                }
+            });
+
+            container.addView(alphaLabel);
+            container.addView(alphaSeek);
+            container.addView(redLabel);
+            container.addView(redSeek);
+            container.addView(greenLabel);
+            container.addView(greenSeek);
+            container.addView(blueLabel);
+            container.addView(blueSeek);
+
+            updateColor.run();
+
+            new AlertDialog.Builder(activity)
+                    .setTitle(title)
+                    .setView(container)
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        int currentColor = Color.argb(alphaSeek.getProgress(), redSeek.getProgress(), greenSeek.getProgress(), blueSeek.getProgress());
+                        prefs.edit().putInt(prefKey, currentColor).apply();
+                        if (onApplied != null) onApplied.run();
+                        Toast.makeText(activity, "Updated successfully!", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
         }
     }
 }
