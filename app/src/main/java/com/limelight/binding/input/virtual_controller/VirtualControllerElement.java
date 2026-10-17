@@ -1003,4 +1003,33 @@ public abstract class VirtualControllerElement extends View {
 
         requestLayout();
     }
+
+    public static void copyProperties(VirtualControllerElement source, VirtualControllerElement target) {
+        target.setGamepadFlag(source.getGamepadFlag());
+        target.setOpacity(source.getOpacity());
+        target.setRotation(source.getRotation());
+        target.setSensitivity(source.getSensitivity());
+        target.setShape(source.getShape());
+        target.setDynamicMode(source.isDynamicMode());
+        target.setDynamicStickType(source.getDynamicStickType());
+        target.setDynamicReturn(source.isDynamicReturn());
+        target.setDynamicReturnSpeed(source.getDynamicReturnSpeed());
+        target.setJiggleness(source.getJiggleness());
+        target.setMouseStaticReturn(source.isMouseStaticReturn());
+        target.setMouseReturnType(source.getMouseReturnType());
+        target.setToggleMode(source.isToggleMode());
+        target.setShiftMode(source.isShiftMode());
+        target.setTouchThrough(source.isTouchThrough());
+        target.setAvoidTouchThroughConflict(source.isAvoidTouchThroughConflict());
+        target.setExclusiveTouch(source.isExclusiveTouch());
+        target.setOrderingMode(source.isOrderingMode());
+        target.setApplyOnHold(source.isApplyOnHold());
+        target.setHoldRepeat(source.isHoldRepeat());
+        target.setHoldRepeatDelay(source.getHoldRepeatDelay());
+        target.setHoldActivationTime(source.getHoldActivationTime());
+        if (source.getExtraGamepadFlags() != null) {
+            target.getExtraGamepadFlags().clear();
+            target.getExtraGamepadFlags().addAll(source.getExtraGamepadFlags());
+        }
+    }
 }

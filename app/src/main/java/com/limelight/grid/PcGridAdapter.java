@@ -72,6 +72,8 @@ public class PcGridAdapter extends GenericGridAdapter<PcView.ComputerObject> {
 
     @Override
     public void populateView(View parentView, ImageView imgView, ProgressBar prgView, TextView txtView, ImageView overlayView, PcView.ComputerObject obj) {
+        com.limelight.utils.UiHelper.applyPcCardTheme(parentView.getContext(), parentView, getLayoutId() == R.layout.pc_list_item);
+
         if (obj == ADD_PC_DUMMY || (obj != null && obj.isAddPcPlaceholder)) {
             imgView.setImageResource(R.drawable.ic_add_computer);
             imgView.setAlpha(1.0f);

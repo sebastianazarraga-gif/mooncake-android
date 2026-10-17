@@ -11,20 +11,28 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Insets;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.LocaleList;
 import android.annotation.SuppressLint;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.util.DisplayMetrics;
 import android.transition.Slide;
 import android.transition.Transition;
 import android.view.Gravity;
 import android.app.ActivityOptions;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.content.Intent;
@@ -388,22 +396,50 @@ public class UiHelper {
         }
 
         View rootView = activity.findViewById(android.R.id.content);
-        java.io.File customBg = new java.io.File(activity.getFilesDir(), "custom_theme_bg.jpg");
-        if (customBg.exists() && customBg.length() > 0) {
+        boolean isLandscape = activity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+
+        java.io.File customBgLandscape = new java.io.File(activity.getFilesDir(), "custom_theme_bg_landscape.jpg");
+        java.io.File customBgPortrait = new java.io.File(activity.getFilesDir(), "custom_theme_bg_portrait.jpg");
+        java.io.File customBgFallback = new java.io.File(activity.getFilesDir(), "custom_theme_bg.jpg");
+
+        java.io.File targetBg = null;
+        if (isLandscape) {
+            if (customBgLandscape.exists() && customBgLandscape.length() > 0) {
+                targetBg = customBgLandscape;
+            } else if (customBgFallback.exists() && customBgFallback.length() > 0) {
+                targetBg = customBgFallback;
+            }
+        } else {
+            if (customBgPortrait.exists() && customBgPortrait.length() > 0) {
+                targetBg = customBgPortrait;
+            } else if (customBgFallback.exists() && customBgFallback.length() > 0) {
+                targetBg = customBgFallback;
+            }
+        }
+
+        if (targetBg != null && targetBg.exists() && targetBg.length() > 0) {
             try {
-                android.graphics.drawable.Drawable drawable = android.graphics.drawable.Drawable.createFromPath(customBg.getAbsolutePath());
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+                boolean keepAspect = isLandscape ?
+                        prefs.getBoolean("checkbox_keep_aspect_ratio_landscape", false) :
+                        prefs.getBoolean("checkbox_keep_aspect_ratio_portrait", false);
+                int zoom = isLandscape ? prefs.getInt("theme_zoom_landscape", 50) : prefs.getInt("theme_zoom_portrait", 50);
+                int x = isLandscape ? prefs.getInt("theme_stretch_x_landscape", 0) : prefs.getInt("theme_stretch_x_portrait", 0);
+                int y = isLandscape ? prefs.getInt("theme_stretch_y_landscape", 0) : prefs.getInt("theme_stretch_y_portrait", 0);
+                int x2 = isLandscape ? prefs.getInt("theme_stretch_x2_landscape", 0) : prefs.getInt("theme_stretch_x2_portrait", 0);
+                int y2 = isLandscape ? prefs.getInt("theme_stretch_y2_landscape", 0) : prefs.getInt("theme_stretch_y2_portrait", 0);
+
+                android.graphics.drawable.Drawable drawable = createAspectRatioDrawable(activity, targetBg, keepAspect, zoom, x, y, x2, y2);
                 if (drawable != null) {
                     activity.getWindow().setBackgroundDrawable(drawable);
-                    if (rootView != null) {
-                        rootView.setBackground(drawable);
-                        if (rootView instanceof android.view.ViewGroup && ((android.view.ViewGroup) rootView).getChildCount() > 0) {
-                            View inflatedLayoutRoot = ((android.view.ViewGroup) rootView).getChildAt(0);
-                            if (inflatedLayoutRoot != null) {
-                                inflatedLayoutRoot.setBackground(null);
-                            }
+                    if (rootView instanceof android.view.ViewGroup && ((android.view.ViewGroup) rootView).getChildCount() > 0) {
+                        View inflatedLayoutRoot = ((android.view.ViewGroup) rootView).getChildAt(0);
+                        if (inflatedLayoutRoot != null) {
+                            inflatedLayoutRoot.setBackground(null);
                         }
                     }
                     applyHeaderTheme(activity);
+                    applyNavTheme(activity);
                     return;
                 }
             } catch (Exception e) {
@@ -413,18 +449,326 @@ public class UiHelper {
 
         // Restore default gradient when custom theme image is reset/deleted
         activity.getWindow().setBackgroundDrawableResource(R.drawable.main_background_gradient);
-        if (rootView != null) {
-            rootView.setBackgroundResource(R.drawable.main_background_gradient);
-            if (rootView instanceof android.view.ViewGroup && ((android.view.ViewGroup) rootView).getChildCount() > 0) {
-                View inflatedLayoutRoot = ((android.view.ViewGroup) rootView).getChildAt(0);
-                if (inflatedLayoutRoot != null) {
-                    inflatedLayoutRoot.setBackgroundResource(R.drawable.main_background_gradient);
-                }
+        if (rootView instanceof android.view.ViewGroup && ((android.view.ViewGroup) rootView).getChildCount() > 0) {
+            View inflatedLayoutRoot = ((android.view.ViewGroup) rootView).getChildAt(0);
+            if (inflatedLayoutRoot != null) {
+                inflatedLayoutRoot.setBackgroundResource(R.drawable.main_background_gradient);
             }
         }
 
         applyHeaderTheme(activity);
         applyNavTheme(activity);
+    }
+
+    public static android.graphics.drawable.Drawable createAspectRatioDrawable(Context context, java.io.File imgFile, boolean keepAspect, int zoom, int x, int y, int x2, int y2) {
+        try {
+            Bitmap bitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
+            if (bitmap == null) return null;
+
+            int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = context.getResources().getDisplayMetrics().heightPixels;
+            if (screenWidth == 0 || screenHeight == 0) {
+                return new BitmapDrawable(context.getResources(), bitmap);
+            }
+
+            float bitmapWidth = bitmap.getWidth();
+            float bitmapHeight = bitmap.getHeight();
+
+            int targetWidth, targetHeight;
+            if (keepAspect) {
+                float bitmapRatio = bitmapWidth / bitmapHeight;
+                float screenRatio = (float) screenWidth / screenHeight;
+                if (bitmapRatio > screenRatio) {
+                    targetWidth = screenWidth;
+                    targetHeight = (int) (screenWidth / bitmapRatio);
+                } else {
+                    targetHeight = screenHeight;
+                    targetWidth = (int) (screenHeight * bitmapRatio);
+                }
+            } else {
+                targetWidth = screenWidth;
+                targetHeight = screenHeight;
+            }
+
+            float zoomScale = zoom / 50.0f;
+            targetWidth = (int) (targetWidth * zoomScale);
+            targetHeight = (int) (targetHeight * zoomScale);
+
+            targetWidth += (x + x2);
+            targetHeight += (y + y2);
+
+            if (targetWidth < 10) targetWidth = 10;
+            if (targetHeight < 10) targetHeight = 10;
+
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true);
+
+            Bitmap screenBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(screenBitmap);
+            canvas.drawColor(0xFF0D001A);
+
+            float left = (screenWidth - targetWidth) / 2f + (x - x2);
+            float top = (screenHeight - targetHeight) / 2f + (y - y2);
+            canvas.drawBitmap(scaledBitmap, left, top, null);
+
+            return new BitmapDrawable(context.getResources(), screenBitmap);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return android.graphics.drawable.Drawable.createFromPath(imgFile.getAbsolutePath());
+        }
+    }
+
+    public static void applyPcCardTheme(Context context, View parentView, boolean isListView) {
+        if (context == null || parentView == null) return;
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        boolean isLandscape = metrics.widthPixels > metrics.heightPixels;
+
+        String modeSuffix = isListView ? "_list" : "_grid";
+        String orientSuffix = isListView ? (isLandscape ? "_list_landscape" : "_list_portrait") : (isLandscape ? "_grid_landscape" : "_grid_portrait");
+
+        int alphaPercent = prefs.getInt("theme_pc_card_transparency" + orientSuffix,
+                prefs.getInt("theme_pc_card_transparency" + modeSuffix, 100));
+        int cornerRadiusDp = prefs.getInt("theme_pc_card_corner_radius" + orientSuffix,
+                prefs.getInt("theme_pc_card_corner_radius" + modeSuffix, 16));
+        float radiusPx = cornerRadiusDp * metrics.density;
+        float alpha = alphaPercent / 100.0f;
+
+        java.io.File cardImgFile = null;
+        if (isListView) {
+            java.io.File cardImgLandscape = new java.io.File(context.getFilesDir(), "custom_pc_card_bg_list_landscape.jpg");
+            java.io.File cardImgPortrait = new java.io.File(context.getFilesDir(), "custom_pc_card_bg_list_portrait.jpg");
+
+            if (isLandscape) {
+                if (cardImgLandscape.exists() && cardImgLandscape.length() > 0) {
+                    cardImgFile = cardImgLandscape;
+                }
+            } else {
+                if (cardImgPortrait.exists() && cardImgPortrait.length() > 0) {
+                    cardImgFile = cardImgPortrait;
+                }
+            }
+        } else {
+            java.io.File cardImgLandscape = new java.io.File(context.getFilesDir(), "custom_pc_card_bg_grid_landscape.jpg");
+            java.io.File cardImgPortrait = new java.io.File(context.getFilesDir(), "custom_pc_card_bg_grid_portrait.jpg");
+            java.io.File cardImgFallback = new java.io.File(context.getFilesDir(), "custom_pc_card_bg_grid.jpg");
+
+            if (isLandscape) {
+                if (cardImgLandscape.exists() && cardImgLandscape.length() > 0) {
+                    cardImgFile = cardImgLandscape;
+                } else if (cardImgFallback.exists() && cardImgFallback.length() > 0) {
+                    cardImgFile = cardImgFallback;
+                }
+            } else {
+                if (cardImgPortrait.exists() && cardImgPortrait.length() > 0) {
+                    cardImgFile = cardImgPortrait;
+                } else if (cardImgFallback.exists() && cardImgFallback.length() > 0) {
+                    cardImgFile = cardImgFallback;
+                }
+            }
+        }
+
+        View gridCardLayout = parentView.findViewById(R.id.grid_image_layout);
+        if (gridCardLayout != null) {
+            gridCardLayout.setAlpha(alpha);
+
+            if (cardImgFile != null && cardImgFile.exists() && cardImgFile.length() > 0) {
+                try {
+                    Bitmap bitmap = BitmapFactory.decodeFile(cardImgFile.getAbsolutePath());
+                    if (bitmap != null) {
+                        int cardSize = (int) (125 * metrics.density);
+                        int w = bitmap.getWidth();
+                        int h = bitmap.getHeight();
+                        int minDim = Math.min(w, h);
+                        Bitmap croppedBitmap = Bitmap.createBitmap(bitmap, (w - minDim) / 2, (h - minDim) / 2, minDim, minDim);
+                        Bitmap scaledBitmap = Bitmap.createScaledBitmap(croppedBitmap, cardSize, cardSize, true);
+
+                        BitmapDrawable bd = new BitmapDrawable(context.getResources(), scaledBitmap);
+                        gridCardLayout.setBackground(bd);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                int color = prefs.getInt("theme_pc_card_color" + orientSuffix,
+                        prefs.getInt("theme_pc_card_color" + modeSuffix, 0xFF1A1A1A));
+                GradientDrawable gd = new GradientDrawable();
+                gd.setColor(color);
+                gd.setCornerRadius(radiusPx);
+                gridCardLayout.setBackground(gd);
+            }
+        }
+
+        if (parentView instanceof androidx.cardview.widget.CardView) {
+            androidx.cardview.widget.CardView cardView = (androidx.cardview.widget.CardView) parentView;
+            cardView.setAlpha(alpha);
+            cardView.setRadius(radiusPx);
+
+            if (cardImgFile != null && cardImgFile.exists() && cardImgFile.length() > 0) {
+                try {
+                    Bitmap bitmap = BitmapFactory.decodeFile(cardImgFile.getAbsolutePath());
+                    if (bitmap != null) {
+                        BitmapDrawable bd = new BitmapDrawable(context.getResources(), bitmap);
+                        cardView.setCardBackgroundColor(Color.TRANSPARENT);
+                        if (cardView.getChildCount() > 0) {
+                            cardView.getChildAt(0).setBackground(bd);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                int color = prefs.getInt("theme_pc_card_color" + orientSuffix,
+                        prefs.getInt("theme_pc_card_color" + modeSuffix, 0xFF1A1A1A));
+                cardView.setCardBackgroundColor(color);
+                if (cardView.getChildCount() > 0) {
+                    cardView.getChildAt(0).setBackground(null);
+                }
+            }
+        }
+    }
+
+    public static void applyUiTransparency(View parentView, float alpha, boolean isListView) {
+        if (parentView == null) return;
+
+        if (isListView) {
+            if (parentView instanceof androidx.cardview.widget.CardView) {
+                androidx.cardview.widget.CardView cardView = (androidx.cardview.widget.CardView) parentView;
+                if (cardView.getChildCount() > 0) {
+                    setAlphaRecursive(cardView.getChildAt(0), alpha);
+                }
+            }
+        } else {
+            if (parentView instanceof ViewGroup) {
+                ViewGroup vg = (ViewGroup) parentView;
+                for (int i = 0; i < vg.getChildCount(); i++) {
+                    View child = vg.getChildAt(i);
+                    if (child.getId() == R.id.grid_image_layout) {
+                        if (child instanceof ViewGroup) {
+                            ViewGroup innerVg = (ViewGroup) child;
+                            for (int j = 0; j < innerVg.getChildCount(); j++) {
+                                setAlphaRecursive(innerVg.getChildAt(j), alpha);
+                            }
+                        }
+                    } else {
+                        setAlphaRecursive(child, alpha);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void setAlphaRecursive(View view, float alpha) {
+        if (view == null) return;
+        view.setAlpha(alpha);
+        if (view instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) view;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                setAlphaRecursive(vg.getChildAt(i), alpha);
+            }
+        }
+    }
+
+    public static void applyStreamingWindowBackground(Activity activity, View backgroundView) {
+        if (activity == null || backgroundView == null || activity.isFinishing() || activity.isDestroyed()) {
+            return;
+        }
+
+        backgroundView.post(() -> {
+            DisplayMetrics metrics = new DisplayMetrics();
+            activity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+            int w = metrics.widthPixels;
+            int h = metrics.heightPixels;
+            if (w < h) { int temp = w; w = h; h = temp; }
+
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+            java.io.File customBg = new java.io.File(activity.getFilesDir(), "custom_streaming_window_bg.jpg");
+
+            if (customBg.exists() && customBg.length() > 0) {
+                try {
+                    android.graphics.drawable.Drawable drawable = createCenterCropDrawable(activity, customBg, w, h);
+                    if (drawable != null) {
+                        backgroundView.setBackground(drawable);
+                        return;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else if (prefs.contains("theme_streaming_window_color")) {
+                int color = prefs.getInt("theme_streaming_window_color", 0xFF0D001A);
+                backgroundView.setBackgroundColor(color);
+                return;
+            }
+
+            backgroundView.setBackgroundColor(0xFF000000);
+        });
+    }
+
+    public static android.graphics.drawable.Drawable createCenterCropDrawable(Context context, java.io.File imgFile, int screenWidth, int screenHeight) {
+        try {
+            Bitmap bitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
+            if (bitmap == null) return null;
+
+            int bitmapWidth = bitmap.getWidth();
+            int bitmapHeight = bitmap.getHeight();
+
+            float bitmapRatio = (float) bitmapWidth / bitmapHeight;
+            float screenRatio = (float) screenWidth / screenHeight;
+
+            int targetWidth, targetHeight;
+            if (bitmapRatio > screenRatio) {
+                targetHeight = screenHeight;
+                targetWidth = Math.round(screenHeight * bitmapRatio);
+            } else {
+                targetWidth = screenWidth;
+                targetHeight = Math.round(screenWidth / bitmapRatio);
+            }
+
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true);
+            Bitmap screenBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(screenBitmap);
+            canvas.drawColor(0xFF000000);
+
+            float left = (screenWidth - targetWidth) / 2f;
+            float top = (screenHeight - targetHeight) / 2f;
+            canvas.drawBitmap(scaledBitmap, left, top, null);
+
+            return new BitmapDrawable(context.getResources(), screenBitmap);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static void applyVirtualControllerBackground(Activity activity, View targetView) {
+        if (activity == null || targetView == null || activity.isFinishing() || activity.isDestroyed()) {
+            return;
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+        java.io.File customBg = new java.io.File(activity.getFilesDir(), "custom_virtual_controller_bg.jpg");
+
+        if (customBg.exists() && customBg.length() > 0) {
+            try {
+                int zoom = prefs.getInt("theme_zoom_virtual_controller", 50);
+                int x = prefs.getInt("theme_stretch_x_virtual_controller", 0);
+                int y = prefs.getInt("theme_stretch_y_virtual_controller", 0);
+                int x2 = prefs.getInt("theme_stretch_x2_virtual_controller", 0);
+                int y2 = prefs.getInt("theme_stretch_y2_virtual_controller", 0);
+
+                android.graphics.drawable.Drawable drawable = createAspectRatioDrawable(activity, customBg, true, zoom, x, y, x2, y2);
+                if (drawable != null) {
+                    targetView.setBackground(drawable);
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (prefs.contains("theme_virtual_controller_color")) {
+            int color = prefs.getInt("theme_virtual_controller_color", Color.TRANSPARENT);
+            targetView.setBackgroundColor(color);
+            return;
+        }
     }
 
     public static void applyHeaderTheme(Activity activity) {

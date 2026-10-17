@@ -250,6 +250,36 @@ public class VirtualController {
         frame_layout.addView(element, layoutParams);
     }
 
+    public void replaceElement(VirtualControllerElement oldElement, VirtualControllerElement newElement) {
+        int index = elements.indexOf(oldElement);
+        if (index != -1) {
+            android.view.ViewGroup.LayoutParams lp = oldElement.getLayoutParams();
+            int x = oldElement.getLeft();
+            int y = oldElement.getTop();
+            int width = oldElement.getWidth();
+            int height = oldElement.getHeight();
+            if (lp instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
+                x = flp.leftMargin;
+                y = flp.topMargin;
+                width = flp.width;
+                height = flp.height;
+            }
+
+            frame_layout.removeView(oldElement);
+            elements.set(index, newElement);
+
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(width, height);
+            layoutParams.setMargins(x, y, 0, 0);
+            frame_layout.addView(newElement, layoutParams);
+
+            if (selectedElement == oldElement) {
+                selectedElement = newElement;
+                selectionListener.onElementSelected(newElement);
+            }
+        }
+    }
+
     public List<VirtualControllerElement> getElements() {
         return elements;
     }

@@ -263,6 +263,39 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // allows proper touch splitting, which the OSC relies upon.
         View backgroundTouchView = findViewById(R.id.backgroundTouchView);
         backgroundTouchView.setOnTouchListener(this);
+        UiHelper.applyStreamingWindowBackground(this, backgroundTouchView);
+
+        SharedPreferences gamePrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean stretchVideo = gamePrefs.getBoolean("checkbox_stretch_video", false);
+        if (!stretchVideo) {
+            int sx = gamePrefs.getInt("theme_stretch_x_stream_screen", 0);
+            int sy = gamePrefs.getInt("theme_stretch_y_stream_screen", 0);
+            int sx2 = gamePrefs.getInt("theme_stretch_x2_stream_screen", 0);
+            int sy2 = gamePrefs.getInt("theme_stretch_y2_stream_screen", 0);
+
+            if (sx != 0 || sy != 0 || sx2 != 0 || sy2 != 0) {
+                backgroundTouchView.post(() -> {
+                    int parentW = backgroundTouchView.getWidth();
+                    int parentH = backgroundTouchView.getHeight();
+                    if (parentW <= 0) parentW = getResources().getDisplayMetrics().widthPixels;
+                    if (parentH <= 0) parentH = getResources().getDisplayMetrics().heightPixels;
+
+                    com.limelight.utils.StreamingLayoutHelper.ViewportBounds bounds =
+                            com.limelight.utils.StreamingLayoutHelper.calculateViewport(this, parentW, parentH);
+
+                    android.view.ViewGroup.LayoutParams lp = streamView.getLayoutParams();
+                    if (lp instanceof android.widget.FrameLayout.LayoutParams) {
+                        android.widget.FrameLayout.LayoutParams flp = (android.widget.FrameLayout.LayoutParams) lp;
+                        flp.gravity = android.view.Gravity.TOP | android.view.Gravity.LEFT;
+                        flp.width = Math.round(bounds.width);
+                        flp.height = Math.round(bounds.height);
+                        flp.leftMargin = Math.round(bounds.left);
+                        flp.topMargin = Math.round(bounds.top);
+                        streamView.setLayoutParams(flp);
+                    }
+                });
+            }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Request unbuffered input event dispatching for all input classes we handle here.

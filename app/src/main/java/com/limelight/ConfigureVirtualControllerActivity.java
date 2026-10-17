@@ -41,7 +41,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
     private View sidePanel, propertiesContainer, kbdContainer, gpContainer, msContainer, repeatContainer, activationContainer, orderingContainer, orderSettingsContainer, holdRepeatContainer, holdRepeatSettings;
     private LinearLayout extraKbdContainer, extraGpContainer, extraMsContainer;
     private ImageButton addKbdButton, addGpButton, addMsButton;
-    private Spinner mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner, dynamicStickSpinner, mouseReturnTypeSpinner;
+    private Spinner controlTypeSpinner, mappingModeSpinner, bindingSpinner, shapeSpinner, colorSpinner, repeatUnitSpinner, activationUnitSpinner, orderActivationUnitSpinner, orderGapUnitSpinner, holdRepeatDelayUnit, holdActivationUnit, savesSpinner, useOnAppSpinner, dynamicStickSpinner, mouseReturnTypeSpinner;
     private SeekBar widthSlider, heightSlider, rotationSlider, sensitivitySlider, opacitySlider, returnSpeedSlider, jigglenessSlider, customValueSlider;
     private TextView bindingLabel, sensitivityLabel, panelTitle, rotationLabel, widthValueText, heightValueText, opacityValueText, sensitivityValueText, rotationValueText, returnSpeedValueText, jigglenessValueText, customValueText;
     private View dynamicStickContainer, returnSpeedContainer, mouseReturnProperties;
@@ -178,6 +178,7 @@ public class ConfigureVirtualControllerActivity extends Activity {
         UiHelper.notifyNewRootView(this);
 
         FrameLayout frameLayout = findViewById(R.id.configure_virtual_controller_frameLayout);
+        UiHelper.applyVirtualControllerBackground(this, frameLayout);
         virtualController = new VirtualController(null, frameLayout, this);
 
         initSidePanel();
@@ -313,6 +314,39 @@ public class ConfigureVirtualControllerActivity extends Activity {
         sidePanel = findViewById(R.id.sidePanel);
         propertiesContainer = findViewById(R.id.propertiesContainer);
         panelTitle = findViewById(R.id.panelTitle);
+        controlTypeSpinner = findViewById(R.id.controlTypeSpinner);
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, new String[]{"Button", "Analog", "D-Pad"});
+        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        controlTypeSpinner.setAdapter(typeAdapter);
+        controlTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (isUpdatingUI) return;
+                VirtualControllerElement current = virtualController.getSelectedElement();
+                if (current == null) return;
+
+                int currentType = 0;
+                if (current instanceof AnalogStick) currentType = 1;
+                else if (current instanceof DigitalPad) currentType = 2;
+
+                if (position != currentType) {
+                    VirtualControllerElement newElement;
+                    int newId = current.getId();
+                    if (position == 0) {
+                        newElement = VirtualControllerConfigurationLoader.createDigitalButton(newId, ControllerPacket.A_FLAG, 0, 1, "A", -1, virtualController, ConfigureVirtualControllerActivity.this);
+                    } else if (position == 1) {
+                        newElement = new LeftAnalogStick(virtualController, ConfigureVirtualControllerActivity.this, newId);
+                    } else {
+                        newElement = new DigitalPad(virtualController, ConfigureVirtualControllerActivity.this, newId);
+                    }
+
+                    VirtualControllerElement.copyProperties(current, newElement);
+                    virtualController.replaceElement(current, newElement);
+                }
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
         mappingModeSpinner = findViewById(R.id.mappingModeSpinner);
         bindingSpinner = findViewById(R.id.bindingSpinner);
         bindingLabel = findViewById(R.id.bindingLabel);
@@ -1089,6 +1123,13 @@ public class ConfigureVirtualControllerActivity extends Activity {
         else if (element.isKeyboardMapping()) mappingModeSpinner.setSelection(1);
         else if (element.isMouseMapping()) mappingModeSpinner.setSelection(2);
         else mappingModeSpinner.setSelection(0);
+
+        isUpdatingUI = true;
+        int typeIndex = 0;
+        if (element instanceof AnalogStick) typeIndex = 1;
+        else if (element instanceof DigitalPad) typeIndex = 2;
+        controlTypeSpinner.setSelection(typeIndex, false);
+        isUpdatingUI = false;
 
         int mode = mappingModeSpinner.getSelectedItemPosition();
         if (mode == 0) updateBindingSpinner(GAMEPAD_BUTTONS);

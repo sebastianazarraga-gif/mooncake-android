@@ -284,8 +284,8 @@
             android:defaultValue="false"/>
     </PreferenceCategory>
     <PreferenceCategory
-        android:key="themes"
-        android:title="@string/themes">
+        android:key="category_header_nav_theme"
+        android:title="Header &amp; Navigation Bar Settings">
         <CheckBoxPreference
             android:key="checkbox_transparent_header"
             android:title="Make header transparent"
@@ -295,6 +295,10 @@
             android:key="button_change_header_color"
             android:title="Change header color"
             android:summary="Pick a custom color for the top header bar." />
+        <Preference
+            android:key="button_revert_header_themes"
+            android:title="Revert Header Themes"
+            android:summary="Revert Header theme settings back to default."/>
         <CheckBoxPreference
             android:key="checkbox_transparent_nav"
             android:title="Make bottom navigation transparent"
@@ -305,9 +309,188 @@
             android:title="Change bottom navigation color"
             android:summary="Pick a custom color for the bottom navigation bar." />
         <Preference
-            android:key="Button_themes"
-            android:title="Open Gallery &amp; Set Background"
-            android:summary="Opens your phone gallery to choose and crop photo for the theme background."/>
+            android:key="button_revert_nav_themes"
+            android:title="Revert Navigation Bar Themes"
+            android:summary="Revert Navigation Bar theme settings back to default."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_wallpaper_theme"
+        android:title="App Wallpaper &amp; Background Adjustments">
+        <Preference
+            android:key="Button_themes_landscape"
+            android:title="Open Gallery &amp; Set Background for landscape"
+            android:summary="Opens your phone gallery to choose and crop photo for the landscape theme background."/>
+        <Preference
+            android:key="Button_themes_portrait"
+            android:title="Open Gallery &amp; Set Background for portrait"
+            android:summary="Opens your phone gallery to choose and crop photo for the portrait theme background."/>
+        <CheckBoxPreference
+            android:key="checkbox_keep_aspect_ratio_landscape"
+            android:title="Keep Aspect Ratio for landscape"
+            android:summary="Keeps the aspect ratio of the landscape background image so it doesn't look stretched."
+            android:defaultValue="false" />
+        <CheckBoxPreference
+            android:key="checkbox_keep_aspect_ratio_portrait"
+            android:title="Keep Aspect Ratio for portrait"
+            android:summary="Keeps the aspect ratio of the portrait background image so it doesn't look stretched."
+            android:defaultValue="false" />
+        <Preference
+            android:key="preference_zoom_landscape"
+            android:title="Set background zoom for landscape"
+            android:summary="Adjust background image zoom level (1 to 100)."/>
+        <Preference
+            android:key="preference_zoom_portrait"
+            android:title="Set background zoom for portrait"
+            android:summary="Adjust background image zoom level (1 to 100)."/>
+        <Preference
+            android:key="preference_stretch_landscape"
+            android:title="Stretch or compress background for landscape"
+            android:summary="Fine-tune individual sides (X, Y, X2, Y2)."/>
+        <Preference
+            android:key="preference_stretch_portrait"
+            android:title="Stretch or compress background for portrait"
+            android:summary="Fine-tune individual sides (X, Y, X2, Y2)."/>
+        <Preference
+            android:key="button_revert_app_background_themes"
+            android:title="Revert App Background Themes"
+            android:summary="Revert App Background theme settings back to default."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_pc_cards_grid"
+        android:title="PC Cards Customization - Grid Mode">
+        <Preference
+            android:key="preference_pc_card_background_grid_landscape"
+            android:title="Change PC cards background for Grid Mode (Landscape)"
+            android:summary="Choose custom color or image for Grid Mode PC cards in landscape orientation."/>
+        <Preference
+            android:key="preference_pc_card_transparency_grid_landscape"
+            android:title="PC card transparency for Grid Mode (Landscape)"
+            android:summary="Adjust transparency/opacity for Grid Mode cards in landscape orientation."/>
+        <Preference
+            android:key="preference_pc_card_corners_grid_landscape"
+            android:title="PC card corners for Grid Mode (Landscape)"
+            android:summary="Adjust corner roundness for Grid Mode cards in landscape orientation."/>
+
+        <Preference
+            android:key="preference_pc_card_background_grid_portrait"
+            android:title="Change PC cards background for Grid Mode (Portrait)"
+            android:summary="Choose custom color or image for Grid Mode PC cards in portrait orientation."/>
+        <Preference
+            android:key="preference_pc_card_transparency_grid_portrait"
+            android:title="PC card transparency for Grid Mode (Portrait)"
+            android:summary="Adjust transparency/opacity for Grid Mode cards in portrait orientation."/>
+        <Preference
+            android:key="preference_pc_card_corners_grid_portrait"
+            android:title="PC card corners for Grid Mode (Portrait)"
+            android:summary="Adjust corner roundness for Grid Mode cards in portrait orientation."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_pc_cards_list"
+        android:title="PC Cards Customization - List Mode">
+        <Preference
+            android:key="preference_pc_card_background_list_landscape"
+            android:title="Change PC cards background for List Mode (Landscape)"
+            android:summary="Choose custom color or image for List Mode PC cards in landscape orientation."/>
+        <Preference
+            android:key="preference_pc_card_transparency_list_landscape"
+            android:title="PC card transparency for List Mode (Landscape)"
+            android:summary="Adjust transparency/opacity for List Mode cards in landscape orientation."/>
+        <Preference
+            android:key="preference_pc_card_corners_list_landscape"
+            android:title="PC card corners for List Mode (Landscape)"
+            android:summary="Adjust corner roundness for List Mode cards in landscape orientation."/>
+
+        <Preference
+            android:key="preference_pc_card_background_list_portrait"
+            android:title="Change PC cards background for List Mode (Portrait)"
+            android:summary="Choose custom color or image for List Mode PC cards in portrait orientation."/>
+        <Preference
+            android:key="preference_pc_card_transparency_list_portrait"
+            android:title="PC card transparency for List Mode (Portrait)"
+            android:summary="Adjust transparency/opacity for List Mode cards in portrait orientation."/>
+        <Preference
+            android:key="preference_pc_card_corners_list_portrait"
+            android:title="PC card corners for List Mode (Portrait)"
+            android:summary="Adjust corner roundness for List Mode cards in portrait orientation."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_pc_card_templates"
+        android:title="PC Card Image Templates">
+        <Preference
+            android:key="preference_download_template_grid"
+            android:title="Get image template for PC Card (Grid Mode)"
+            android:summary="Download a template image for Grid Mode PC Cards to your device."/>
+        <Preference
+            android:key="preference_download_template_list_landscape"
+            android:title="Get image template for PC Card (List - Landscape)"
+            android:summary="Download a landscape template image for List Mode PC Cards."/>
+        <Preference
+            android:key="preference_download_template_list_portrait"
+            android:title="Get image template for PC Card (List - Portrait)"
+            android:summary="Download a portrait template image for List Mode PC Cards."/>
+        <Preference
+            android:key="button_revert_pc_card_themes"
+            android:title="Revert PC Card Themes"
+            android:summary="Revert PC Card theme settings back to default."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_streaming_themes"
+        android:title="Streaming Themes">
+        <Preference
+            android:key="button_streaming_window_background"
+            android:title="Set background for streaming window"
+            android:summary="Choose custom color or image for the streaming window letterbox background."/>
+        <Preference
+            android:key="preference_zoom_streaming"
+            android:title="Set streaming background zoom"
+            android:summary="Adjust streaming background zoom level (1 to 100)."/>
+        <Preference
+            android:key="preference_stretch_streaming"
+            android:title="Stretch or compress streaming background"
+            android:summary="Fine-tune individual sides (X, Y, X2, Y2) for streaming background."/>
+        <Preference
+            android:key="preference_stretch_stream_screen"
+            android:title="Stretch or compress streaming screen"
+            android:summary="Adjust margins (X, Y, X2, Y2) for the streaming video view."/>
+        <Preference
+            android:key="preference_download_template_streaming"
+            android:title="Get image template for Streaming Window"
+            android:summary="Download a custom template image with safe-zone lines for the streaming background."/>
+        <Preference
+            android:key="button_revert_streaming_themes"
+            android:title="Revert Streaming Themes"
+            android:summary="Revert Streaming theme settings back to default."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_virtual_controller_themes"
+        android:title="Virtual Controller Themes">
+        <Preference
+            android:key="button_virtual_controller_background"
+            android:title="Set background for Virtual Controller"
+            android:summary="Choose custom color or image for the Virtual Controller background."/>
+        <Preference
+            android:key="preference_zoom_virtual_controller"
+            android:title="Set Virtual Controller background zoom"
+            android:summary="Adjust Virtual Controller background zoom level (1 to 100)."/>
+        <Preference
+            android:key="preference_stretch_virtual_controller"
+            android:title="Stretch or compress Virtual Controller background"
+            android:summary="Fine-tune individual sides (X, Y, X2, Y2) for Virtual Controller background."/>
+        <Preference
+            android:key="button_revert_virtual_controller_themes"
+            android:title="Revert Virtual Controller Themes"
+            android:summary="Revert Virtual Controller theme settings back to default."/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_theme_reset"
+        android:title="Reset Theme">
         <Preference
             android:key="button_reset_theme"
             android:title="Reset Themes"

@@ -127,11 +127,13 @@ public class PcView extends Activity implements AdapterFragmentCallbacks {
             PreferenceConfiguration config = PreferenceConfiguration.readPreferences(this);
             if (pcGridAdapter != null) {
                 pcGridAdapter.updateLayoutWithPreferences(this, config);
+                pcGridAdapter.notifyDataSetChanged();
             }
             
             // Relayout the UI elements without recreating the fragment if possible
             UiHelper.setupBottomNav(this, 0);
             UiHelper.applyImmersiveMode(this);
+            UiHelper.applyCustomThemeBackground(this);
         }
     }
 
